@@ -1,4 +1,8 @@
 ﻿
+Param(
+    [Switch]$Debug = $True
+)
+
 #Default action when an error occured
 $ErrorActionPreference = "Stop"
 
