@@ -81,9 +81,9 @@ If (!(Get-Module | Where-Object {$_.Name -eq "ActiveDirectory"})){
         
         #Active Directory module installed on that computer.
         Log -Text "Active Directory module installed on that computer"
-        #Trying to import Active Directory module.
-        Log -Text "Trying to import Active Directory module"
         Try {
+            #Trying to import Active Directory module.
+            Log -Text "Trying to import Active Directory module"
             Import-Module ActiveDirectory 
         }
         Catch {
@@ -135,8 +135,8 @@ ForEach ($Group in $Groups) {
     $NestedGroup = $Null
     
     #Finding nested group in current group.
-    Log -Text "Finding nested group in current group $($Group.Name)"
     Try {
+        Log -Text "Finding nested group in current group $($Group.Name)"
         $NestedGroups = Get-ADGroupMember -Identity $Group.Name | Where-Object {($_.objectClass -eq 'group') -and ($_.Name -notin ($Builtin | Where-Object {$_.Group -eq $Group.Name} | Select -Property Member -ExpandProperty Member))}
     }
     Catch {
