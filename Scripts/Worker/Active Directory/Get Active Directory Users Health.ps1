@@ -162,7 +162,7 @@ ForEach ($DomainUserPasswordNotRequired in $DomainUserPasswordNotRequiredArray) 
     Write-Host " - $($DomainUserPasswordNotRequired.Name)" 
 }
 
-#Find all users who do not require rre authentication.
+#Find all users who do not require pre authentication.
 #In earlier versions, Kerberos allowed authentication without a password. Now, in Kerberos 5, a password 
 #is required, which is called "pre-authentication." An attack that focuses on accounts with the pre-authentication 
 #option disabled is called an AS-REP roasting attack.
