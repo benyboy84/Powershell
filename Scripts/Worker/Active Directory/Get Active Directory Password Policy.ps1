@@ -109,7 +109,7 @@ Write-Host "Minimum Password Age          : $($DomainPasswordPolicy.MinPasswordA
 Write-Host "Password History Count        : $($DomainPasswordPolicy.PasswordHistoryCount)"
 Write-Host "Minimum Password Length       : $($DomainPasswordPolicy.MinPasswordLength)"
 Write-Host "Lockout Duration              : $($DomainPasswordPolicy.LockoutDuration)"
-Write-Host "LockoutThreshold              : $($DomainPasswordPolicy.LockoutThreshold)"
+Write-Host "Lockout Threshold              : $($DomainPasswordPolicy.LockoutThreshold)"
 Write-Host "Lockout Observation Window    : $($DomainPasswordPolicy.LockoutObservationWindow)"
 Write-Host "Reversible Encryption Enabled : $($DomainPasswordPolicy.ReversibleEncryptionEnabled)"
 
