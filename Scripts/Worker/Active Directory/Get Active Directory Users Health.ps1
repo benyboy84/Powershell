@@ -156,8 +156,6 @@ ForEach ($DomainKerberosDESUsers in $DomainKerberosDESUsersArray) {
 }
 
 #Find all users with Password Not Required property.
-#Accounts that can use DES to authenticate to services are at significantly greater risk of having that 
-#account's logon sequence decrypted and the account compromised, since DES is considered weaker cryptography. 
 [array]$DomainUserPasswordNotRequiredArray = $DomainUsers | Where {$_.PasswordNotRequired -eq $True}
 Write-Host "Users with Password Not Required ($($DomainUserPasswordNotRequiredArray.Count))" -ForegroundColor Cyan
 ForEach ($DomainUserPasswordNotRequired in $DomainUserPasswordNotRequiredArray) {
