@@ -145,23 +145,23 @@ ForEach ($DomainUsersWithReversibleEncryptionPassword in $DomainUsersWithReversi
     Write-Host " - $($DomainUsersWithReversibleEncryptionPassword.Name)" 
 }
 
-#Find all users with Password Not Required property.
-#Accounts that can use DES to authenticate to services are at significantly greater risk of having that 
-#account's logon sequence decrypted and the account compromised, since DES is considered weaker cryptography. 
-#The command below helps identify the accounts that support Kerberos DES encryption in the domain.
-[array]$DomainUserPasswordNotRequiredArray = $DomainUsers | Where {$_.PasswordNotRequired -eq $True}
-Write-Host "Users with Password Not Required ($($DomainUserPasswordNotRequiredArray.Count))" -ForegroundColor Cyan
-ForEach ($DomainUserPasswordNotRequired in $DomainUserPasswordNotRequiredArray) {
-    Write-Host " - $($DomainUserPasswordNotRequired.Name)" 
-}
-
 #Find all users with Kerberos DES.
 #Accounts that can use DES to authenticate to services are at significantly greater risk of having that 
 #account's logon sequence decrypted and the account compromised, since DES is considered weaker cryptography. 
+#The command below helps identify the accounts that support Kerberos DES encryption in the domain.
 [array]$DomainKerberosDESUsersArray = $DomainUsers | Where { $_.UserAccountControl -band 0x200000 }
 Write-Host "Kerberos DES User ($($DomainKerberosDESUsersArray.Count))" -ForegroundColor Cyan
 ForEach ($DomainKerberosDESUsers in $DomainKerberosDESUsersArray) {
     Write-Host " - $($DomainKerberosDESUsers.Name)" 
+}
+
+#Find all users with Password Not Required property.
+#Accounts that can use DES to authenticate to services are at significantly greater risk of having that 
+#account's logon sequence decrypted and the account compromised, since DES is considered weaker cryptography. 
+[array]$DomainUserPasswordNotRequiredArray = $DomainUsers | Where {$_.PasswordNotRequired -eq $True}
+Write-Host "Users with Password Not Required ($($DomainUserPasswordNotRequiredArray.Count))" -ForegroundColor Cyan
+ForEach ($DomainUserPasswordNotRequired in $DomainUserPasswordNotRequiredArray) {
+    Write-Host " - $($DomainUserPasswordNotRequired.Name)" 
 }
 
 #Find all users who do not require rre authentication.
