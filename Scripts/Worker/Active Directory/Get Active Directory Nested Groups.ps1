@@ -113,7 +113,7 @@ Try {
 
     #Get all groups in Active Directory
     Log -Text "Getting all group in currently logged Active Directory"
-    $Groups = Get-ADGroup -Filter *
+    $Groups = Get-ADGroup -Filter 'GroupCategory -eq "Security"'
 }
 Catch {
 
