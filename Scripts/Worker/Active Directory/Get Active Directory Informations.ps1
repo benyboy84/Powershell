@@ -1,4 +1,4 @@
- # **********************************************************************************
+# **********************************************************************************
 # Script to find all information regarding Active Directory.
 #
 # If you need to troubleshoot the script, you can enable the Debug option in
@@ -159,7 +159,22 @@ ElseIf ($ADNum -eq '44') {$SchemaVersion = 'Windows Server 2008'}
 ElseIf ($ADNum -eq '31') {$SchemaVersion = 'Windows Server 2003 R2'}
 ElseIf ($ADNum -eq '30') {$SchemaVersion = 'Windows Server 2003'}
 
+Write-Host "Active Directory Infomations" -ForegroundColor Cyan
+Write-Host "Forest Name                        : $($ForestInfo.Name)"
+Write-Host "Domain Name                        : $($DomainInfo.Name)"
+Write-Host "NetBios Name                       : $($DomainInfo.NetBIOSName)"
+Write-Host "Forest mode                        : $($ForestInfo.ForestMode)"
+Write-Host "Domain Mode                        : $($DomainInfo.DomainMode)"
+Write-Host "Active Directory Schema Version    : $($WindowsVersion)"
+Write-Host "FSMO Roles" -ForegroundColor Cyan
+Write-Host "Schema Master                      : $($ForestInfo.SchemaMaster)"
+Write-Host "Domain Naming Master               : $($ForestInfo.DomainNamingMaster)"
+Write-Host "Relative ID (RID) Master           : $($DomainInfo.RidMaster)"
+Write-Host "Primary Domain Controller          : $($DomainInfo.PDCEmulator)"
+Write-Host "Infrastructure Master              : $($DomainInfo.InfrastructureMaster )"
+
 #Getting Active Directory Objects.
+Write-Host "Active Directory objects statistics" -ForegroundColor Cyan
 Log -Text "Getting Active Directory Objects"
 Try {
     #Get all Active Directory computer objects.
@@ -169,6 +184,7 @@ Try {
 Catch {
     Log -Text "An error occured during getting Active Directory computers objects" -Error
 }
+Write-Host "Computers                          : $($Computers)"
 Try {
     #Get all Active Directory users objects .
     Log -Text "Getting Active Directory users objects"
@@ -177,6 +193,7 @@ Try {
 Catch {
     Log -Text "An error occured during getting Active Directory users objects" -Error
 }
+Write-Host "Users                              : $($Users)"
 Try {
     #Get all Active Directory groups objects.
     Log -Text "Getting Active Directory groups objects"
@@ -185,6 +202,7 @@ Try {
 Catch {
     Log -Text "An error occured during getting Active Directory groups objects" -Error
 }
+Write-Host "Groups                             : $($Groups)"
 Try {
     #Get all Active Directory GPO objects.
     Log -Text "Getting Active Directory GPO objects"
@@ -193,6 +211,7 @@ Try {
 Catch {
     Log -Text "An error occured during getting Active Directory GPO objects" -Error
 }
+Write-Host "GPO                                : $($GPO)"
 
 #Get Sites and Services informations.
 Try {
@@ -228,88 +247,82 @@ Catch {
     Log -Text "An error occured during getting Active Directory Replication Site Link" -Error
 }
 
-
-ForEach ($DC in $DCList) {
-
-    Get-ADDomainController -Identity $DC.Name
-
-}
-
-Write-Host ""
-Write-Host "Active Directory Infomations" -ForegroundColor Cyan
-Write-Host "Forest Name                        : $($ForestInfo.Name)"
-Write-Host "Domain Name                        : $($DomainInfo.Name)"
-Write-Host "NetBios Name                       : $($DomainInfo.NetBIOSName)"
-Write-Host "Forest mode                        : $($ForestInfo.ForestMode)"
-Write-Host "Domain Mode                        : $($DomainInfo.DomainMode)"
-Write-Host "Active Directory Schema Version    : $($SchemaVersion)"
-Write-Host ""
-Write-Host "FSMO Roles" -ForegroundColor Cyan
-Write-Host "Schema Master                      : $($ForestInfo.SchemaMaster)"
-Write-Host "Domain Naming Master               : $($ForestInfo.DomainNamingMaster)"
-Write-Host "Relative ID (RID) Master           : $($DomainInfo.RidMaster)"
-Write-Host "Primary Domain Controller          : $($DomainInfo.PDCEmulator)"
-Write-Host "Infrastructure Master              : $($DomainInfo.InfrastructureMaster )"
-Write-Host ""
-Write-Host "Active Directory objects statistics" -ForegroundColor Cyan
-Write-Host "Computers                          : $($Computers.count)"
-Write-Host "Users                              : $($Users.count)"
-Write-Host "Groups                             : $($Groups.count)"
-Write-Host "GPO                                : $($GPO.count)"
-Write-Host ""
 Write-Host "Active Directory Sites & Services Infomations" -ForegroundColor Cyan
-ForEach ($ADSite in $ADSites) {
-  Write-Host "Site Name                          : $($ADSite.Name)" 
-  $SiteSubnets = $ADSubnets | Where-Object {$_.Site -match $ADSite.Name}
-  If ($SiteSubnets -eq $Null) {
-    Write-Host " Subnet                            : "
-  }
-  ElseIf ($SiteSubnets.Length -eq 1) {
-    Write-Host " Subnet                            : $($SiteSubnets.Name)"
-  }
-  Else {
-    Write-Host " Subnet                            : $($SiteSubnets[0].Name)"
-    For ($i=1; $i -lt $SiteSubnets.Length; $i++) {
-    Write-Host "                                     $($SiteSubnets[$i].Name)"
+Write-Host "Inter-Site Transport" -ForegroundColor DarkCyan
+ForEach ($ADReplicationSiteLink in $ADReplicationSiteLinks) {
+    Write-Host "Name                               : $($ADReplicationSiteLink.Name)"
+    Write-Host " Cost                              : $($ADReplicationSiteLink.Cost)"
+    Write-Host " Replication Frequency In Minutes  : $($ADReplicationSiteLink.ReplicationFrequencyInMinutes)"
+    Write-Host " Sites                             : $(($ADReplicationSiteLink.SitesIncluded[0].Split(",") | Select-Object -First 1).Replace("CN=",''))"
+    For ($i=1; $i -lt ($ADReplicationSiteLink.SitesIncluded).Count; $i++) {
+        Write-Host "                                     $(($ADReplicationSiteLink.SitesIncluded[$i].Split(",") | Select-Object -First 1).Replace("CN=",''))"
     }
-  }
-  $SiteLinks = $ADReplicationSiteLinks | Where-Object {$_.SitesIncluded -match $ADSite.Name}
-  If ($SiteLinks -eq $Null) {
-    Write-Host " Inter-Site Transport              : "
-  }
-  ElseIf ($SiteLinks.Length -eq 1) {
-    Write-Host " Inter-Site Transport              : $($SiteLinks.Name)"
-    Write-Host "  Cost                             : $($SiteLinks.Cost)"
-    Write-Host "  Replication Frequency In Minutes : $($SiteLinks.ReplicationFrequencyInMinutes)"
-  }
-  Else {
-    ForEach ($SiteLink in $SiteLinks) {
-        Write-Host " Inter-Site Transport              : $($SiteLink.Name)"
-        Write-Host "  Cost                             : $($SiteLink.Cost)"
-        Write-Host "  Replication Frequency In Minutes : $($SiteLink.ReplicationFrequencyInMinutes)"
-    }
-  }
-  $Servers = Get-ADDomainController | Where-Object {$_.Site -eq $ADSite.Name}
-  ForEach ($Server in $Servers) {
-    
-    Write-Host " Server                            : $($Server.Name)"
-    $FromServers = $AdReplicationConnections | Where-Object {$_.ReplicateToDirectoryServer -match $Server.Name} | Select-Object ReplicateFromDirectoryServer
-
-    If ($FromServers -eq $Null) {
-        Write-Host " Replicated from                   : "
-    }
-    ElseIf ($FromServers.Length -eq 1) {
-        Write-Host " Replicated from                   : $($FromServers.Name)"
+ }
+ Write-Host "Subnets" -ForegroundColor DarkCyan
+ ForEach ($ADSubnet in $ADSubnets) {
+    Write-Host "Name                               : $($ADSubnet.Name)"
+    If ($ADSubnet.Site -ne $Null) {
+        Write-Host " Site                              : $((($ADSubnet.Site).Split(",") | Select-Object -First 1).Replace("CN=",''))"
     }
     Else {
-        Write-Host " Replicated from                   : $($FromServers[0].Name)"
-        For ($i=1; $i -lt $FromServers.Length; $i++) {
-        Write-Host "                                     $($FromServers[$i].Name)"
-        }
-      }
- 
-    
-  }
+        Write-Host " Site                              : "
+    }
+}
+Write-Host "Sites" -ForegroundColor DarkCyan
+ForEach ($ADSite in $ADSites) {
+    Write-Host "Site Name                          : $($ADSite.Name)" 
+    $Servers = $DCDetails | Where-Object {$_.Site -eq $ADSite.Name}
+    ForEach ($Server in $Servers) {
+        Write-Host " Server                            : $($Server.Name)"
+        $FromServers = $AdReplicationConnections | Where-Object {$_.ReplicateToDirectoryServer -match $Server.Name} | Select-Object ReplicateFromDirectoryServer
 
+        If ($FromServers -eq $Null) {
+            Write-Host " Replicated from                   : "
+        }
+        ElseIf ($FromServers.Length -eq 1) {
+            Write-Host "  Replicated from                  : $(($FromServers.ReplicateFromDirectoryServer.Split(",") | Select-Object -Skip 1 | Select-Object -First 1).Replace("CN=",''))"
+        }
+        Else {
+            Write-Host "  Replicated from                  : $(($FromServers[0].ReplicateFromDirectoryServer.Split(",") | Select-Object -Skip 1 | Select-Object -First 1).Replace("CN=",''))"
+            For ($i=1; $i -lt $FromServers.Length; $i++) {
+                Write-Host "                                     $(($FromServers[$i].ReplicateFromDirectoryServer.Split(",") | Select-Object -Skip 1 | Select-Object -First 1).Replace("CN=",''))"
+            }
+        }
+    }
 }
 
+#Get details configuration for Domain Controller.
+$DCDetails = @()
+Log -Text "Get details configuration for every Domain Controller"
+ForEach ($DC in $DCList) {
+    Try {
+        $DomainController = $Null
+        #Getting details informations for specefic Domain Controller.
+        Log -Text "Getting details informations for $($DC)"
+        $DomainController = Get-ADDomainController -Identity $DC
+    }
+    Catch {
+        Log -Text "Unable to get details infomations for $($DC)" -Error
+    }
+    #Build an array with the desired properties for Domain Controllers
+    If ($DomainController -ne $Null) {
+        $Object = "" |  Select-Object Name,
+                                    IPAddress,
+                                    OperatingSystem,
+                                    Site,
+                                    GlobalCatalog,
+                                    ReadOnly
+        $Object.Name = $DomainController.Name
+        $Object.IPAddress = $DomainController.IPv4Address
+        $Object.OperatingSystem = $DomainController.OperatingSystem 
+        $Object.Site = $DomainController.Site
+        $Object.GlobalCatalog = $DomainController.IsGlobalCatalog
+        $Object.ReadOnly = $DomainController.IsReadOnly
+        $DCDetails += $Object
+    }
+}
+
+Write-Host "Domain Controllers" -ForegroundColor Cyan
+$DCDetails | FT
+
+Log -Text "Script ended"

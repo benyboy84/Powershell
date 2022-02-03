@@ -1,5 +1,5 @@
 # **********************************************************************************
-# Script to find all nested groups in Active Directory.
+# Script to find empty groups in Active Directory.
 #
 # If you need to troubleshoot the script, you can enable the Debug option in
 # the parameter. This will generate display information on the screen.
@@ -52,20 +52,15 @@ Function Log {
 
 # **********************************************************************************
 
-#Default nested groups in Active Directory
-$Builtin = @(
-    New-Object PSObject -Property @{Group = "Administrators"; Member = "Domain Admins"}
-    New-Object PSObject -Property @{Group = "Administrators"; Member = "Enterprise Admins"}
-    New-Object PSObject -Property @{Group = "Users"; Member = "Domain Users"}
-    New-Object PSObject -Property @{Group = "Guests"; Member = "Domain Guests"}
-    New-Object PSObject -Property @{Group = "Denied RODC Password Replication Group"; Member = "Read-only Domain Controllers"}
-    New-Object PSObject -Property @{Group = "Denied RODC Password Replication Group"; Member = "Group Policy Creator Owners"}
-    New-Object PSObject -Property @{Group = "Denied RODC Password Replication Group"; Member = "Domain Admins"}
-    New-Object PSObject -Property @{Group = "Denied RODC Password Replication Group"; Member = "Cert Publishers"}
-    New-Object PSObject -Property @{Group = "Denied RODC Password Replication Group"; Member = "Enterprise Admins"}
-    New-Object PSObject -Property @{Group = "Denied RODC Password Replication Group"; Member = "Schema Admins"}
-    New-Object PSObject -Property @{Group = "Denied RODC Password Replication Group"; Member = "Domain Controllers"}
-)
+$BuiltinGroups = @("Print Operators","Backup Operators","Replicator","Remote Desktop Users",
+"Network Configuration Operators","Performance Monitor Users","Performance Log Users",
+"Distributed COM Users","Cryptographic Operators","Event Log Readers","Certificate Service DCOM Access",
+"RDS Remote Access Servers","RDS Endpoint Servers","RDS Management Servers","Hyper-V Administrators",
+"Access Control Assistance Operators","Remote Management Users","Storage Replica Administrators",
+"Domain Computers","Cert Publishers","RAS and IAS Servers","Server Operators","Account Operators",
+"Incoming Forest Trust Builders","Terminal Server License Servers","Allowed RODC Password Replication Group",
+"Read-only Domain Controllers","Enterprise Read-only Domain Controllers","Cloneable Domain Controllers",
+"Protected Users","Key Admins","Enterprise Key Admins","DnsAdmins","DnsUpdateProxy")
 
 # **********************************************************************************
 
@@ -113,7 +108,7 @@ Try {
 
     #Get all groups in Active Directory
     Log -Text "Getting all group in currently logged Active Directory"
-    $Groups = Get-ADGroup -Filter *
+    $Groups = Get-ADGroup -Filter * | Where-Object {$BuiltinGroups -notcontains $_.Name}
 }
 Catch {
 
@@ -125,48 +120,31 @@ Catch {
 }
 
 $Count = 0
-$Result = @()
 
-#Loop in each group to find nested group.
+Write-Host "Empty Groups" -ForegroundColor DarkCyan
+#Loop in each group to find Empry group.
 ForEach ($Group in $Groups) {
 
-    Write-Progress -Id 1 -Activity "Finding nested groups.." -Status "Analysing $($Count) of $($Groups.count): Group - $($Group.Name)"  -PercentComplete ($Count/$Groups.count*100) 
+    Write-Progress -Id 1 -Activity "Finding empty groups.." -Status "Analysing $($Count) of $($Groups.count): Group - $($Group.Name)"  -PercentComplete ($Count/$Groups.count*100) 
     $Count ++
-    $NestedGroup = $Null
     
-    #Finding nested group in current group.
+    
+    #Finding empty group in current group.
     Try {
-        Log -Text "Finding nested group in current group $($Group.Name)"
-        $NestedGroups = Get-ADGroupMember -Identity $Group.Name | Where-Object {($_.objectClass -eq 'group') -and ($_.Name -notin ($Builtin | Where-Object {$_.Group -eq $Group.Name} | Select -Property Member -ExpandProperty Member))}
+        If ((Get-ADGroupMember -Identity $Group.Name).Count -eq 0) {
+            Write-Host " - $($Group.Name)"
+        }
     }
     Catch {
         Log -Text "An error occured guring getting Active Directory group's members for group $($Group.Name)" -Warning
     }
 
-    #If NestedGroups is not null, we will add the nested group into the result output.
-    ForEach ($NestedGroup in $NestedGroups) {
 
-        $object = "" |  Select-Object GroupName,
-                                      Member
-        $object.GroupName = $Group.Name
-        $object.Member = $NestedGroup.Name
-        $Result += $object
 
-    }
+
 
 }
+
+
 
 Log -Text "Script ended"
-
-If ($Result -ne $Null) {
-
-    #Display result of the script to the screen.
-    Write-Host "Listing Nested Rroups..." -ForegroundColor Cyan
-    $Result | Sort-Object -Property GroupName | Ft 
-
-}
-Else {
-
-    Write-Host "No nested group in Active Directory" -ForegroundColor Cyan
-
-}
