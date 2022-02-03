@@ -139,12 +139,6 @@ ForEach ($Group in $Groups) {
         Log -Text "An error occured guring getting Active Directory group's members for group $($Group.Name)" -Warning
     }
 
-
-
-
-
 }
-
-
 
 Log -Text "Script ended"

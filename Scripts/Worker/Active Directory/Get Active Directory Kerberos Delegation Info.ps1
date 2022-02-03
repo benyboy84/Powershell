@@ -133,28 +133,3 @@ $Unconstrained | FT
 $Constrained = $KerberosDelegationArray | Where-Object {$_.KerberosType -eq "Constrained"} | Select Name,ObjectClass,KerberosDelegationServices
 Write-Host "ctive Directory Object with Constrained" -ForegroundColor Cyan
 $Constrained | FT
-
-
-
-
-
-
-
-
-
-## Identify Accounts with Kerberos Delegation
-$KerberosDelegationArray = @()
-[array]$KerberosDelegationObjects =  Get-ADObject -filter { (UserAccountControl -BAND 0x0080000) -AND (PrimaryGroupID -ne '516') -AND (PrimaryGroupID -ne '521') } -prop Name,ObjectClass,PrimaryGroupID,UserAccountControl,ServicePrincipalName
-
-ForEach ($KerberosDelegationObjectItem in $KerberosDelegationObjects)
- {
-    IF ($KerberosDelegationObjectItem.UserAccountControl -BAND 0x0080000)
-     { $KerberosDelegationServices = 'All Services' ; $KerberosType = 'Unconstrained' }
-    ELSE 
-     { $KerberosDelegationServices = 'Specific Services' ; $KerberosType = 'Constrained' } 
-     $KerberosDelegationObjectItem | Add-Member -MemberType NoteProperty -Name KerberosDelegationServices -Value $KerberosDelegationServices -Force
-     $KerberosDelegationObjectItem | Add-Member -MemberType NoteProperty -Name KerberosType -Value $KerberosType -Force
-     [array]$KerberosDelegationArray += $KerberosDelegationObjectItem
- }
-
-$Requiredpros = $KerberosDelegationArray | Select Name,ObjectClass,KerberosDelegationServices,KerberosType
