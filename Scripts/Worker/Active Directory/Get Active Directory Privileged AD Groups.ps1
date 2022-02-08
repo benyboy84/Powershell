@@ -123,7 +123,7 @@ $Count = 0
 ForEach($Group in $ADPrivGroupArray){
 
     Write-Progress -Id 1 -Activity "Listing users in privileged groups.." -Status "Analysing $($Count) of $($ADPrivGroupArray.count): Group - $($Group)"  -PercentComplete ($Count/$ADPrivGroupArray.count*100) 
-    $Count ++
+    $Count++
     
     Write-Host $Group -ForegroundColor DarkCyan
     Try {
