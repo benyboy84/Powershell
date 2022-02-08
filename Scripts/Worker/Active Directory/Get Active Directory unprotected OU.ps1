@@ -1,15 +1,10 @@
 # **********************************************************************************
-# Script to get members of privileged groups.
-#
-# In Active Directory, privileged accounts have controlling rights and permissions. 
-# They can carry out all designated tasks in Active Directory, on domain controllers, 
-# and on client computers. On the flip side, privileged account abuse can result in 
-# data breaches, downtime, failed compliance audits, and other bad situations. These 
-# groups should be audited often and cleaned up if any inappropriate members are 
-# added to them.
+# Script to find unprotected OU in Active Directory.
 #
 # If you need to troubleshoot the script, you can enable the Debug option in
 # the parameter. This will generate display information on the screen.
+#
+# This script needs to be run directly on a Domain Controller.
 #
 # This script use Active Directory module
 #
@@ -17,7 +12,7 @@
 # 
 # Date        Par                 Modification
 # ----------  ------------------  -----------------------------------------------
-# 2022-02-01  Benoit Blais        Original version
+# 2022-02-08  Benoit Blais        Original version
 # **********************************************************************************
 
 Param(
@@ -71,9 +66,9 @@ If (!(Get-Module | Where-Object {$_.Name -eq "ActiveDirectory"})){
         
         #Active Directory module installed on that computer.
         Log -Text "Active Directory module installed on that computer"
+        #Trying to import Active Directory module.
+        Log -Text "Trying to import Active Directory module"
         Try {
-            #Trying to import Active Directory module.
-            Log -Text "Trying to import Active Directory module"
             Import-Module ActiveDirectory 
         }
         Catch {
@@ -99,42 +94,20 @@ Else {
 
 }
 
-#List of all privileged groups.
-$ADPrivGroupArray = @(
- 'Administrators',
- 'Domain Admins',
- 'Enterprise Admins',
- 'Schema Admins',
- 'Account Operators',
- 'Server Operators',
- 'Group Policy Creator Owners',
- 'DNSAdmins',
- 'Enterprise Key Admins',
- 'Exchange Domain Servers',
- 'Exchange Enterprise Servers',
- 'Exchange Admins',
- 'Organization Management',
- 'Exchange Windows Permissions'
-)
-
-Write-Host "Privileged Group's Members" -ForegroundColor Cyan
-$Count = 0
-#Loop in each group to find list of users.
-ForEach($Group in $ADPrivGroupArray){
-
-    Write-Progress -Id 1 -Activity "Listing users in privileged groups.." -Status "Analysing $($Count) of $($ADPrivGroupArray.count): Group - $($Group)"  -PercentComplete ($Count/$ADPrivGroupArray.count*100) 
-    $Count ++
-    
-    Write-Host $Group -ForegroundColor DarkCyan
-    Try {
-        Log -Text "Getting members of Active Directory group $($Group)"
-        [array]$GroupMember = Get-ADGroupMember -Identity $Group -Recursive  | Select-Object Name
-        Write-Host "$($Group) ($($GroupMember.count))"
-        ForEach ($Member in $GroupMember) {
-            Write-Host " - $($Member.Name)"
-        }
-    }
-    Catch{
-        Log -Text "An error occured during getting members of Active Directory group $($Group)"
-    }
+#Get all Active Directory OU.
+Try {
+    Log -Text "Collecting Active Directory OU"
+    [array]$OUs =  Get-ADOrganizationalUnit -Filter 'Name -like "*"' -Properties *
 }
+Catch {
+    Log -Text "An error occured when collecting Active Directory OU" -Error
+}
+
+$UnprotectedOUs = $OUs | where {$_.ProtectedFromAccidentalDeletion -eq $false}
+$ProtectedOUs = $OUs.count - $UnprotectedOUs.count
+
+Write-Host "Active Directory protected OUs     : $($ProtectedOUs)" -ForegroundColor Cyan
+Write-Host "Active Directory unprotected OUs   : $($UnprotectedOUs.Count)" -ForegroundColor Cyan
+Write-Host "Active Directory OUs               : $($OUs.Count)" -ForegroundColor Cyan
+
+$UnprotectedOUs | Select-Object -Property Name, DistinguishedName | FT -AutoSize

@@ -95,7 +95,7 @@ Else {
 #Get Default Domain Password Policy.
 Try {
     Log -Text "Getting default Domain Password Policy"
-    [array]$DomainPasswordPolicy = Get-ADDefaultDomainPasswordPolicy -Server $DCtoConnect
+    [array]$DomainPasswordPolicy = Get-ADDefaultDomainPasswordPolicy
 }
 Catch {
     Log -Text "An error occured when collecting default Domain Password Policy" -Error
@@ -109,7 +109,7 @@ Write-Host "Minimum Password Age          : $($DomainPasswordPolicy.MinPasswordA
 Write-Host "Password History Count        : $($DomainPasswordPolicy.PasswordHistoryCount)"
 Write-Host "Minimum Password Length       : $($DomainPasswordPolicy.MinPasswordLength)"
 Write-Host "Lockout Duration              : $($DomainPasswordPolicy.LockoutDuration)"
-Write-Host "Lockout Threshold              : $($DomainPasswordPolicy.LockoutThreshold)"
+Write-Host "Lockout Threshold             : $($DomainPasswordPolicy.LockoutThreshold)"
 Write-Host "Lockout Observation Window    : $($DomainPasswordPolicy.LockoutObservationWindow)"
 Write-Host "Reversible Encryption Enabled : $($DomainPasswordPolicy.ReversibleEncryptionEnabled)"
 

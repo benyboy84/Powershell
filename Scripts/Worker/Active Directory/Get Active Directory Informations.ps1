@@ -165,7 +165,7 @@ Write-Host "Domain Name                        : $($DomainInfo.Name)"
 Write-Host "NetBios Name                       : $($DomainInfo.NetBIOSName)"
 Write-Host "Forest mode                        : $($ForestInfo.ForestMode)"
 Write-Host "Domain Mode                        : $($DomainInfo.DomainMode)"
-Write-Host "Active Directory Schema Version    : $($WindowsVersion)"
+Write-Host "Active Directory Schema Version    : $($SchemaVersion)"
 Write-Host "FSMO Roles" -ForegroundColor Cyan
 Write-Host "Schema Master                      : $($ForestInfo.SchemaMaster)"
 Write-Host "Domain Naming Master               : $($ForestInfo.DomainNamingMaster)"
@@ -179,12 +179,37 @@ Log -Text "Getting Active Directory Objects"
 Try {
     #Get all Active Directory computer objects.
     Log -Text "Getting Active Directory computers objects"
-    $Computers = [Array](Get-ADComputer -Filter *).Count
+    $Computers = Get-ADComputer -Filter * -Properties Name,OperatingSystem
+    $OperatingSystems = $Computers | Sort-Object -Property OperatingSystem -Unique | Select-Object OperatingSystem
 }
 Catch {
     Log -Text "An error occured during getting Active Directory computers objects" -Error
 }
-Write-Host "Computers                          : $($Computers)"
+Write-Host "Computers                          : $($Computers.Count)"
+$Result = @()
+ForEach ($OperatingSystem in $OperatingSystems) {
+    If ($operatingSystem.OperatingSystem -eq $Null) {
+    
+        [Array]$Count = Get-ADComputer -Filter * -Properties Name,OperatingSystem | Where-Object {$_.OperatingSystem -eq $Null}
+        $Object = "" | Select-Object OperatingSystem,
+                                     Count
+        $Object.OperatingSystem = $operatingSystem.OperatingSystem
+        $Object.Count = $Count.Count
+        $Result += $Object
+        
+    }
+    Else {
+        [Array]$Count = Get-ADComputer -Filter * -Properties Name,OperatingSystem | Where-Object {$_.OperatingSystem -eq $OperatingSystem.OperatingSystem}
+        $Object = "" | Select-Object OperatingSystem,
+                                     Count
+        $Object.OperatingSystem = $operatingSystem.OperatingSystem
+        $Object.Count = $Count.Count
+        $Result += $Object
+
+    }
+
+}
+$Result | FT -AutoSize
 Try {
     #Get all Active Directory users objects .
     Log -Text "Getting Active Directory users objects"
@@ -197,12 +222,20 @@ Write-Host "Users                              : $($Users)"
 Try {
     #Get all Active Directory groups objects.
     Log -Text "Getting Active Directory groups objects"
-    $Groups = [Array](Get-ADGroup -Filter *).Count
+    $Groups = [Array](Get-ADGroup -Filter *)
 }
 Catch {
     Log -Text "An error occured during getting Active Directory groups objects" -Error
 }
-Write-Host "Groups                             : $($Groups)"
+Write-Host "Groups                             : $($Groups.Count)"
+$SecurityDomainLocal = $Groups | Where-Object {$_.GroupCategory -eq "Security" -and $_.GroupScope -eq "DomainLocal"}
+Write-Host "Security Group - Domain Local      : $($SecurityDomainLocal.count)"
+$SecurityGlobal = $Groups | Where-Object {$_.GroupCategory -eq "Security" -and $_.GroupScope -eq "Global"}
+Write-Host "Security Group - Global            : $($SecurityGlobal.count)"
+$SecurityGlobal = $Groups | Where-Object {$_.GroupCategory -eq "Security" -and $_.GroupScope -eq "Universal"}
+Write-Host "Security Group - Universal         : $($SecurityGlobal.count)"
+$Distribution = $Groups | Where-Object {$_.GroupCategory -eq "Distribution"}
+Write-Host "Distribution                       : $($Distribution.count)"
 Try {
     #Get all Active Directory GPO objects.
     Log -Text "Getting Active Directory GPO objects"
@@ -212,6 +245,40 @@ Catch {
     Log -Text "An error occured during getting Active Directory GPO objects" -Error
 }
 Write-Host "GPO                                : $($GPO)"
+
+#Get details configuration for Domain Controller.
+$DCDetails = @()
+Log -Text "Get details configuration for every Domain Controller"
+ForEach ($DC in $DCList) {
+    Try {
+        $DomainController = $Null
+        #Getting details informations for specefic Domain Controller.
+        Log -Text "Getting details informations for $($DC)"
+        $DomainController = Get-ADDomainController -Identity $DC
+    }
+    Catch {
+        Log -Text "Unable to get details infomations for $($DC)" -Error
+    }
+    #Build an array with the desired properties for Domain Controllers
+    If ($DomainController -ne $Null) {
+        $Object = "" |  Select-Object Name,
+                                    IPAddress,
+                                    OperatingSystem,
+                                    Site,
+                                    GlobalCatalog,
+                                    ReadOnly
+        $Object.Name = $DomainController.Name
+        $Object.IPAddress = $DomainController.IPv4Address
+        $Object.OperatingSystem = $DomainController.OperatingSystem 
+        $Object.Site = $DomainController.Site
+        $Object.GlobalCatalog = $DomainController.IsGlobalCatalog
+        $Object.ReadOnly = $DomainController.IsReadOnly
+        $DCDetails += $Object
+    }
+}
+
+Write-Host "Domain Controllers" -ForegroundColor Cyan
+$DCDetails | FT
 
 #Get Sites and Services informations.
 Try {
@@ -290,39 +357,5 @@ ForEach ($ADSite in $ADSites) {
         }
     }
 }
-
-#Get details configuration for Domain Controller.
-$DCDetails = @()
-Log -Text "Get details configuration for every Domain Controller"
-ForEach ($DC in $DCList) {
-    Try {
-        $DomainController = $Null
-        #Getting details informations for specefic Domain Controller.
-        Log -Text "Getting details informations for $($DC)"
-        $DomainController = Get-ADDomainController -Identity $DC
-    }
-    Catch {
-        Log -Text "Unable to get details infomations for $($DC)" -Error
-    }
-    #Build an array with the desired properties for Domain Controllers
-    If ($DomainController -ne $Null) {
-        $Object = "" |  Select-Object Name,
-                                    IPAddress,
-                                    OperatingSystem,
-                                    Site,
-                                    GlobalCatalog,
-                                    ReadOnly
-        $Object.Name = $DomainController.Name
-        $Object.IPAddress = $DomainController.IPv4Address
-        $Object.OperatingSystem = $DomainController.OperatingSystem 
-        $Object.Site = $DomainController.Site
-        $Object.GlobalCatalog = $DomainController.IsGlobalCatalog
-        $Object.ReadOnly = $DomainController.IsReadOnly
-        $DCDetails += $Object
-    }
-}
-
-Write-Host "Domain Controllers" -ForegroundColor Cyan
-$DCDetails | FT
 
 Log -Text "Script ended"

@@ -56,7 +56,7 @@ Function Log {
 $LastLoggedOnDate = $(Get-Date).AddDays(-180)
 
 #List of properties for Active Directory Users
-$ADLimitedProperties = @("Name","Enabled","SAMAccountname","DisplayName","Enabled","LastLogonDate","PasswordLastSet","PasswordNeverExpires","PasswordNotRequired","PasswordExpired","SmartcardLogonRequired","AccountExpirationDate","AdminCount","Created","Modified","LastBadPasswordAttempt","badpwdcount","mail","CanonicalName","DistinguishedName","ServicePrincipalName","SIDHistory","PrimaryGroupID","UserAccountControl")
+$ADLimitedProperties = @("Name","Enabled","SAMAccountname","DisplayName","Enabled","LastLogonDate","PasswordLastSet","PasswordNeverExpires","PasswordNotRequired","PasswordExpired","SmartcardLogonRequired","AccountExpirationDate","AdminCount","Created","Modified","LastBadPasswordAttempt","badpwdcount","mail","CanonicalName","DistinguishedName","ServicePrincipalName","SIDHistory","PrimaryGroupID","UserAccountControl", "CannotChangePassword")
 
 # **********************************************************************************
 
@@ -174,9 +174,9 @@ ForEach ($DomainUserDoesNotRequirePreAuth in $DomainUserDoesNotRequirePreAuthArr
 
 #Find all users with SID history.
 #SID History enables access for another account to effectively be cloned to another. This is extremely useful to ensure 
-#users retain access when moved (migrated) from one domain to another. Since the user’s SID changes when the new account 
+#users retain access when moved (migrated) from one domain to another. Since the userâ€™s SID changes when the new account 
 #is created, the old SID needs to map to the new one. When a user in Domain A is migrated to Domain B, a new user account 
-#is created in DomainB and DomainA user’s SID is added to DomainB’s user account’s SID History attribute. This ensures 
+#is created in DomainB and DomainA userâ€™s SID is added to DomainBâ€™s user accountâ€™s SID History attribute. This ensures 
 #that DomainB user can still access resources in DomainA.
 #The interesting part of this is that SID History works for SIDs in the same domain as it does across domains in the same 
 #forest, which means that a regular user account in DomainA can contain DomainA SIDs and if the DomainA SIDs are for 
@@ -194,4 +194,11 @@ ForEach ($DomainUsersWithSIDHistory in $DomainUsersWithSIDHistoryArray) {
 Write-Host "Users with Password Never Expires ($($DomainUserPasswordNeverExpiresArray.Count))" -ForegroundColor Cyan
 ForEach ($DomainUserPasswordNeverExpires in $DomainUserPasswordNeverExpiresArray) {
     Write-Host " - $($DomainUserPasswordNeverExpires.Name) ($($DomainUserPasswordNeverExpiresArray.PasswordLastSet))" 
+}
+
+#Find all user with with cannot change password attribute.
+[array]$DomainUsersCannotChangePassword = $DomainUsers | Where {$_.CannotChangePassword -eq $True}
+Write-Host "Users who cannot change password ($($DomainUsersCannotChangePassword.Count))" -ForegroundColor Cyan
+ForEach ($DomainUserCannotChangePassword in $DomainUsersCannotChangePassword) {
+    Write-Host " - $($DomainUserCannotChangePassword.Name)" 
 }
