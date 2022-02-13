@@ -173,78 +173,45 @@ Write-Host "Relative ID (RID) Master           : $($DomainInfo.RidMaster)"
 Write-Host "Primary Domain Controller          : $($DomainInfo.PDCEmulator)"
 Write-Host "Infrastructure Master              : $($DomainInfo.InfrastructureMaster )"
 
-#Getting Active Directory Objects.
-Write-Host "Active Directory objects statistics" -ForegroundColor Cyan
-Log -Text "Getting Active Directory Objects"
-Try {
-    #Get all Active Directory computer objects.
-    Log -Text "Getting Active Directory computers objects"
-    $Computers = Get-ADComputer -Filter * -Properties Name,OperatingSystem
-    $OperatingSystems = $Computers | Sort-Object -Property OperatingSystem -Unique | Select-Object OperatingSystem
-}
-Catch {
-    Log -Text "An error occured during getting Active Directory computers objects" -Error
-}
-Write-Host "Computers                          : $($Computers.Count)"
-$Result = @()
-ForEach ($OperatingSystem in $OperatingSystems) {
-    If ($operatingSystem.OperatingSystem -eq $Null) {
+#Get the size of SysVol Folder
+$SysVolDetails = @()
+ForEach ($DC in $DCList) {
+
+    #Get SysVol folder location
+    Try {
+        Log -Text "Getting SysVol Folder location"
+        $SysVolPath = Invoke-Command -ComputerName $DC -ScriptBlock {Get-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Services\Netlogon\Parameters -Name "SysVol" | Select-Object -ExpandProperty SysVol}
+    }
+    Catch {
+        Log -Text "An error occured during getting SysVol folder location"
+    }
+
+
+    If (Test-Path $SysVolPath) {
+        $Size = Get-ChildItem $SysVolPath -Recurse | Measure-Object -Sum Length | Select-Object Sum
+        Switch ($Size.Sum) {
+            {$_ -lt 1024}                               {$Size = $Size.Sum
+                                                         $Metric = "Bytes"}
+            {($_ -gt 1024) -and ($_ -lt 1048576)}       {$Size = $("{0:N2}" -f ($Size.Sum / 1KB))
+                                                         $Metric = "KB"}
+            {($_ -gt 1048576) -and ($_ -lt 1073741824)} {$Size = $("{0:N2}" -f ($Size.Sum / 1MB))
+                                                         $Metric = "MB"}
+            {$_ -gt 1073741824}                         {$Size = $("{0:N2}" -f ($Size.Sum / 1GB))
+                                                         $Metric = "GB"}
+        }
+    }
     
-        [Array]$Count = Get-ADComputer -Filter * -Properties Name,OperatingSystem | Where-Object {$_.OperatingSystem -eq $Null}
-        $Object = "" | Select-Object OperatingSystem,
-                                     Count
-        $Object.OperatingSystem = $operatingSystem.OperatingSystem
-        $Object.Count = $Count.Count
-        $Result += $Object
-        
-    }
-    Else {
-        [Array]$Count = Get-ADComputer -Filter * -Properties Name,OperatingSystem | Where-Object {$_.OperatingSystem -eq $OperatingSystem.OperatingSystem}
-        $Object = "" | Select-Object OperatingSystem,
-                                     Count
-        $Object.OperatingSystem = $operatingSystem.OperatingSystem
-        $Object.Count = $Count.Count
-        $Result += $Object
-
-    }
+    $Object = "" |  Select-Object Name,
+                                  Path,
+                                  Size
+    $Object.Name = $DC
+    $Object.Path = $($SysVolPath)
+    $Object.Size = "$($Size)$($Metric)"
+    $SysVolDetails += $Object
 
 }
-$Result | FT -AutoSize
-Try {
-    #Get all Active Directory users objects .
-    Log -Text "Getting Active Directory users objects"
-    $Users = [Array](Get-ADUser -filter *).Count
-}
-Catch {
-    Log -Text "An error occured during getting Active Directory users objects" -Error
-}
-Write-Host "Users                              : $($Users)"
-Try {
-    #Get all Active Directory groups objects.
-    Log -Text "Getting Active Directory groups objects"
-    $Groups = [Array](Get-ADGroup -Filter *)
-}
-Catch {
-    Log -Text "An error occured during getting Active Directory groups objects" -Error
-}
-Write-Host "Groups                             : $($Groups.Count)"
-$SecurityDomainLocal = $Groups | Where-Object {$_.GroupCategory -eq "Security" -and $_.GroupScope -eq "DomainLocal"}
-Write-Host "Security Group - Domain Local      : $($SecurityDomainLocal.count)"
-$SecurityGlobal = $Groups | Where-Object {$_.GroupCategory -eq "Security" -and $_.GroupScope -eq "Global"}
-Write-Host "Security Group - Global            : $($SecurityGlobal.count)"
-$SecurityGlobal = $Groups | Where-Object {$_.GroupCategory -eq "Security" -and $_.GroupScope -eq "Universal"}
-Write-Host "Security Group - Universal         : $($SecurityGlobal.count)"
-$Distribution = $Groups | Where-Object {$_.GroupCategory -eq "Distribution"}
-Write-Host "Distribution                       : $($Distribution.count)"
-Try {
-    #Get all Active Directory GPO objects.
-    Log -Text "Getting Active Directory GPO objects"
-    $GPO = [Array](Get-GPO -All).Count
-}
-Catch {
-    Log -Text "An error occured during getting Active Directory GPO objects" -Error
-}
-Write-Host "GPO                                : $($GPO)"
+Write-Host "SysVol Folder Infomations" -ForegroundColor Cyan
+$SysVolDetails | Format-Table -AutoSize
 
 #Get details configuration for Domain Controller.
 $DCDetails = @()
@@ -278,7 +245,7 @@ ForEach ($DC in $DCList) {
 }
 
 Write-Host "Domain Controllers" -ForegroundColor Cyan
-$DCDetails | FT
+$DCDetails | Format-Table -AutoSize
 
 #Get Sites and Services informations.
 Try {
