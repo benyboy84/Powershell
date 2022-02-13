@@ -124,7 +124,7 @@ ForEach ($OperatingSystem in $OperatingSystems) {
 Write-Host "Active Directory Computers Objects by operating system" -ForegroundColor Cyan
 $ComputersByOperatingSystem | Format-Table -AutoSize
 
-#Get computer's objects by last loggon date
+#Get computers objects by last loggon date
 Write-Host "Active Directory Computers Objects by operating system" -ForegroundColor Cyan
 Log -Text "Get computer's objects by last loggon date"
 [Array]$Count = $Computers | Where-Object {$_.Lastlogondate -gt (Get-Date).AddMonths(-6)}
@@ -136,3 +136,4 @@ Write-Host "Between 1 to 2 years               : $($Count.Count)"
 [Array]$Count = $Computers | Where-Object {$_.Lastlogondate -lt (Get-Date).AddMonths(-24) }
 Write-Host "More then 2 years                  : $($Count.Count)"
 
+Log -Text "Script ended"

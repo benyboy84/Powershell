@@ -1,12 +1,5 @@
 # **********************************************************************************
-# Script to get members of privileged groups.
-#
-# In Active Directory, privileged accounts have controlling rights and permissions. 
-# They can carry out all designated tasks in Active Directory, on domain controllers, 
-# and on client computers. On the flip side, privileged account abuse can result in 
-# data breaches, downtime, failed compliance audits, and other bad situations. These 
-# groups should be audited often and cleaned up if any inappropriate members are 
-# added to them.
+# Script to find all Active Directory Groups objects informations.
 #
 # If you need to troubleshoot the script, you can enable the Debug option in
 # the parameter. This will generate display information on the screen.
@@ -69,6 +62,39 @@ $BuiltinGroups = @("Print Operators","Backup Operators","Replicator","Remote Des
 "Read-only Domain Controllers","Enterprise Read-only Domain Controllers","Cloneable Domain Controllers",
 "Protected Users","Key Admins","Enterprise Key Admins","DnsAdmins","DnsUpdateProxy")
 
+#List of all privileged groups.
+$ADPrivGroupArray = @(
+ 'Administrators',
+ 'Domain Admins',
+ 'Enterprise Admins',
+ 'Schema Admins',
+ 'Account Operators',
+ 'Server Operators',
+ 'Group Policy Creator Owners',
+ 'DNSAdmins',
+ 'Enterprise Key Admins',
+ 'Exchange Domain Servers',
+ 'Exchange Enterprise Servers',
+ 'Exchange Admins',
+ 'Organization Management',
+ 'Exchange Windows Permissions'
+)
+
+#Default nested groups in Active Directory
+$Builtin = @(
+    New-Object PSObject -Property @{Group = "Administrators"; Member = "Domain Admins"}
+    New-Object PSObject -Property @{Group = "Administrators"; Member = "Enterprise Admins"}
+    New-Object PSObject -Property @{Group = "Users"; Member = "Domain Users"}
+    New-Object PSObject -Property @{Group = "Guests"; Member = "Domain Guests"}
+    New-Object PSObject -Property @{Group = "Denied RODC Password Replication Group"; Member = "Read-only Domain Controllers"}
+    New-Object PSObject -Property @{Group = "Denied RODC Password Replication Group"; Member = "Group Policy Creator Owners"}
+    New-Object PSObject -Property @{Group = "Denied RODC Password Replication Group"; Member = "Domain Admins"}
+    New-Object PSObject -Property @{Group = "Denied RODC Password Replication Group"; Member = "Cert Publishers"}
+    New-Object PSObject -Property @{Group = "Denied RODC Password Replication Group"; Member = "Enterprise Admins"}
+    New-Object PSObject -Property @{Group = "Denied RODC Password Replication Group"; Member = "Schema Admins"}
+    New-Object PSObject -Property @{Group = "Denied RODC Password Replication Group"; Member = "Domain Controllers"}
+)
+
 # **********************************************************************************
 
 Log -Text "Script Begin"
@@ -115,7 +141,7 @@ Try {
 
     #Get all groups in Active Directory
     Log -Text "Getting all group in currently logged Active Directory"
-    $Groups = Get-ADGroup -Filter * | Where-Object {$BuiltinGroups -notcontains $_.Name}
+    [Array]$Groups = Get-ADGroup -Filter *
 }
 Catch {
 
@@ -126,26 +152,96 @@ Catch {
     
 }
 
-$Count = 0
+Write-Host "Active Directory Groups Objects ($($Groups.Count)))" -ForegroundColor Cyan
 
-Write-Host "Empty Groups" -ForegroundColor DarkCyan
+#Get groups objects by type
+Write-Host "Active Directory Groups Objects by type" -ForegroundColor Cyan
+Log -Text "Active Directory Groups Objects by type"
+[Array]$Count = $Groups | Where-Object {($_.GroupCategory -eq "Security") -and ($_.GroupScope -eq "DomainLocal")}
+Write-Host "Domain Local Security              : $($Count.Count)"
+[Array]$Count = $Groups | Where-Object {($_.GroupCategory -eq "Security") -and ($_.GroupScope -eq "Global")}
+Write-Host "Global Security                    : $($Count.Count)"
+[Array]$Count = $Groups | Where-Object {($_.GroupCategory -eq "Security") -and ($_.GroupScope -eq "Universal")}
+Write-Host "Universal Security                 : $($Count.Count)"
+[Array]$Count = $Groups | Where-Object {$_.GroupCategory -eq "Distribution"}
+Write-Host "Distribution                       : $($Count.Count)"
+
 #Loop in each group to find Empry group.
+Write-Host "Empty Groups" -ForegroundColor DarkCyan
 ForEach ($Group in $Groups) {
 
-    Write-Progress -Id 1 -Activity "Finding empty groups.." -Status "Analysing $($Count) of $($Groups.count): Group - $($Group.Name)"  -PercentComplete ($Count/$Groups.count*100) 
-    $Count ++
-    
-    
-    #Finding empty group in current group.
-    Try {
-        If ((Get-ADGroupMember -Identity $Group.Name).Count -eq 0) {
-            Write-Host " - $($Group.Name)"
+    If ($BuiltinGroups -notcontains $Group.Name){
+
+        #Finding empty group in current group.
+        Try {
+            If ((Get-ADGroupMember -Identity $Group.Name).Count -eq 0) {
+                Write-Host " - $($Group.Name)"
+            }
         }
+        Catch {
+            Log -Text "An error occured guring getting Active Directory group's members for group $($Group.Name)" -Warning
+        }
+
+    }
+
+}
+
+#Loop in each group to find nested group.
+$Result = @()
+ForEach ($Group in $Groups) {
+
+    $NestedGroup = $Null
+    
+    #Finding nested group in current group.
+    Try {
+        Log -Text "Finding nested group in current group $($Group.Name)"
+        $NestedGroups = Get-ADGroupMember -Identity $Group.Name | Where-Object {($_.objectClass -eq 'group') -and ($_.Name -notin ($Builtin | Where-Object {$_.Group -eq $Group.Name} | Select -Property Member -ExpandProperty Member))}
     }
     Catch {
         Log -Text "An error occured guring getting Active Directory group's members for group $($Group.Name)" -Warning
     }
 
+    #If NestedGroups is not null, we will add the nested group into the result output.
+    ForEach ($NestedGroup in $NestedGroups) {
+
+        $object = "" |  Select-Object GroupName,
+                                      Member
+        $object.GroupName = $Group.Name
+        $object.Member = $NestedGroup.Name
+        $Result += $object
+
+    }
+
+}
+
+If ($Result -ne $Null) {
+
+    #Display result of the script to the screen.
+    Write-Host "Listing Nested Rroups..." -ForegroundColor Cyan
+    $Result | Sort-Object -Property GroupName | Ft 
+
+}
+Else {
+
+    Write-Host "No nested group in Active Directory" -ForegroundColor Cyan
+
+}
+
+Write-Host "Privileged Group's Members" -ForegroundColor Cyan
+#Loop in each group to find list of users.
+ForEach($Group in $ADPrivGroupArray){
+
+    Write-Host "$Group ($($GroupMember.count))" -ForegroundColor DarkCyan
+    Try {
+        Log -Text "Getting members of Active Directory group $($Group)"
+        [array]$GroupMember = Get-ADGroupMember -Identity $Group -Recursive  | Select-Object Name
+        ForEach ($Member in $GroupMember) {
+            Write-Host " - $($Member.Name)"
+        }
+    }
+    Catch{
+        Log -Text "An error occured during getting members of Active Directory group $($Group)"
+    }
 }
 
 Log -Text "Script ended"
