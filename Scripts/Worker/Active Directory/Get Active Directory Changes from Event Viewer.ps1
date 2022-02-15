@@ -1,22 +1,38 @@
-#**********************************************************************************
-# Script to find last Actives Directory change(s) from Event Viewer.
-#
-# This script will generate text file with all collected information and
-# a log file with the information related to the script execution.
-#
-# If you need to troubleshoot the script, you can enable the Debug option in 
-# the parameter. This will generate display details informations in the screen.
-#
-# IMPORTANT: 
-# This script needs to be run directly on a Domain Controller and needs 
-# to be run "AS ADMINISTRATOR".
-#
-# ==================================================================================
-# 
-# Date        By                  Modification
-# ----------  ------------------  --------------------------------------------------
-# 2022-02-14  Benoit Blais        Original version
-# **********************************************************************************
+<#
+**********************************************************************************
+Script to find last Actives Directory change(s) from Event Viewer.
+**********************************************************************************
+
+.SYNOPSIS
+Script to find last Actives Directory change(s) from Event Viewer. 
+
+Version 1.0 of this script.
+
+.DESCRIPTION
+This script uses the Windows security event log to collect events about changes 
+made to Active Directory. For entries to be present in the event log, the domain 
+controller's auditing settings must be properly configured. This script will 
+generate text file with all collected information. 
+
+If you need to troubleshoot the script, you can enable the Debug option in the 
+parameter. This will generate display details informations in the screen and
+a log file with the information related to the script execution.
+
+IMPORTANT: 
+This script needs to be run directly on a Domain Controller and needs 
+to be run "AS ADMINISTRATOR".
+
+.EXAMPLE
+./Get Active Directory Changes from Event Viewer.ps1 
+./Get Active Directory Changes from Event Viewer.ps1 -debug 
+
+.NOTES
+Author: Benoit Blais
+
+.LINK
+https://github.com/benyboy84/Powershell
+
+#>
 
 Param(
     [Switch]$Debug = $False
@@ -94,8 +110,8 @@ $ActiveDirectoryChanges = @(
 )
 # **********************************************************************************
 
-#Log function will allow to display colored information in the PowerShell window
-#if debug mode is $TRUE.
+#Log function will allow to display colored information in the PowerShell window and
+#a log file with the information related to the script execution. if debug mode is $TRUE.
 #Parameters:
 #$Text : Text added to the text file.
 #$Error and $Warning: These switch need to be use to specify something else then an information.
@@ -117,13 +133,15 @@ Function Log {
     If ($Debug) {
         If($Error) {
             Write-Host $Text -ForegroundColor Red
+            Try {Add-Content $Log "$(Get-Date) | $Text"} Catch {$Null}
         }ElseIf($Warning) {
             Write-Host $Text -ForegroundColor Yellow
+            Try {Add-Content $Log "$(Get-Date) | $Text"} Catch {$Null}
         }Else {
             Write-Host $Text -ForegroundColor Green
+            Try {Add-Content $Log "$(Get-Date) | $Text"} Catch {$Null}
         }
     }
-    Try {Add-Content $Log "$(Get-Date) | $Text"} Catch {$Null}
 }
 
 # **********************************************************************************
