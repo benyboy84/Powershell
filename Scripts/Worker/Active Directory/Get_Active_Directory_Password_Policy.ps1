@@ -22,8 +22,8 @@ IMPORTANT:
 This script use Active Directory module.
 
 .EXAMPLE
-./Get_Active_Directory_Password_Policy.ps1.ps1 
-./Get_Active_Directory_Password_Policy.ps1.ps1 -debug 
+./Get_Active_Directory_Password_Policy.ps1 
+./Get_Active_Directory_Password_Policy.ps1 -debug 
 
 .NOTES
 Author: Benoit Blais
