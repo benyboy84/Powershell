@@ -14,11 +14,10 @@ This script uses the command Get-ADDefaultDomainPasswordPolicy to retrieve the A
 Directory Password policy.This script will generate text file with all collected 
 information. 
 
-If you need to troubleshoot the script, you can enable the Debug option in the 
-parameter. This will generate display details informations in the screen and
-a log file with the information related to the script execution.
+This script accepts 1 parameter.
+-debug       This will generate display details informations in the screen and a log file with the information related to the script execution.
 
-IMPORTANT: 
+WARNING: 
 This script use Active Directory module.
 
 .EXAMPLE
