@@ -1,12 +1,5 @@
 # **********************************************************************************
-# Script to get members of privileged groups.
-#
-# In Active Directory, privileged accounts have controlling rights and permissions. 
-# They can carry out all designated tasks in Active Directory, on domain controllers, 
-# and on client computers. On the flip side, privileged account abuse can result in 
-# data breaches, downtime, failed compliance audits, and other bad situations. These 
-# groups should be audited often and cleaned up if any inappropriate members are 
-# added to them.
+# Script to find empty groups in Active Directory.
 #
 # If you need to troubleshoot the script, you can enable the Debug option in
 # the parameter. This will generate display information on the screen.
@@ -99,7 +92,7 @@ If (!(Get-Module | Where-Object {$_.Name -eq "ActiveDirectory"})){
     Else {
         
         #Active Directory module is not installed on the current computer.
-        Log -Text "ctive Directory module is not installed on the current computer" -Error
+        Log -Text "Active Directory module is not installed on the current computer" -Error
         #Because this script can't be run without this module, the script execution is stop.
         Break
     }

@@ -106,6 +106,7 @@ Catch {
 }
 Write-Host "Active Directory Computers Objects ($($Computers.Count))" -ForegroundColor Cyan
 
+$OperatingSystems = $Computers | Sort-Object -Property OperatingSystem -Unique | Select-Object OperatingSystem
 
 #Get computer's objects by operating system.
 Log -Text "Get computer's objects by operating system"
@@ -125,7 +126,7 @@ Write-Host "Active Directory Computers Objects by operating system" -ForegroundC
 $ComputersByOperatingSystem | Format-Table -AutoSize
 
 #Get computers objects by last loggon date
-Write-Host "Active Directory Computers Objects by operating system" -ForegroundColor Cyan
+Write-Host "Active Directory Computers Objects by last logon date" -ForegroundColor Cyan
 Log -Text "Get computer's objects by last loggon date"
 [Array]$Count = $Computers | Where-Object {$_.Lastlogondate -gt (Get-Date).AddMonths(-6)}
 Write-Host "Last 6 months                      : $($Count.Count)"

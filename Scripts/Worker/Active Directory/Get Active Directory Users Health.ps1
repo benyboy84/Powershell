@@ -1,5 +1,5 @@
 # **********************************************************************************
-# Script to find all users in Active Directory with potential security issues.
+# Script to find all Active Directory Users objects informations.
 #
 # If you need to troubleshoot the script, you can enable the Debug option in
 # the parameter. This will generate display information on the screen.
@@ -110,27 +110,45 @@ Try {
 } 
 Catch {
     Log -Text "An error occured during getting Active Directory users"
+    #Because this script can't be run without a user's list, the script execution is stop. 
+    Break
 }
 
 #Find all enabled user.
 [array]$DomainEnabledUsers = $DomainUsers | Where {$_.Enabled -eq $True }
+
+#Get users objects by last loggon date
+Write-Host "Active Directory Users by last logon date" -ForegroundColor Cyan
+Log -Text "Get computer's objects by last loggon date"
+[Array]$Count = $DomainUsers | Where-Object {$_.Lastlogondate -gt (Get-Date).AddMonths(-6)}
+Write-Host "Last 6 months                      : $($Count.Count)"
+[Array]$Count = $DomainUsers | Where-Object {($_.Lastlogondate -gt (Get-Date).AddMonths(-12)) -and($_.Lastlogondate -lt (Get-Date).AddMonths(-6))}
+Write-Host "Between 6 months to 1 year         : $($Count.Count)"
+[Array]$Count = $DomainUsers | Where-Object {($_.Lastlogondate -gt (Get-Date).AddMonths(-24)) -and ($_.Lastlogondate -lt (Get-Date).AddMonths(-12))}
+Write-Host "Between 1 to 2 years               : $($Count.Count)"
+[Array]$Count = $DomainUsers | Where-Object {$_.Lastlogondate -lt (Get-Date).AddMonths(-24) }
+Write-Host "More then 2 years                  : $($Count.Count)"
+
+#Find all user with Password Never Expire property. This account have a manual task to reset password.
+#If the password isn't change with a scheduled, this is a security risk.
+[array]$DomainUserPasswordNeverExpiresArray = $DomainUsers | Where {$_.PasswordNeverExpires -eq $True}
+Write-Host "Users with Password Never Expires ($($DomainUserPasswordNeverExpiresArray.Count))" -ForegroundColor Cyan
+ForEach ($DomainUserPasswordNeverExpires in $DomainUserPasswordNeverExpiresArray) {
+    Write-Host " - $($DomainUserPasswordNeverExpires.Name) ($($DomainUserPasswordNeverExpiresArray.PasswordLastSet))" 
+}
+
+#Find all user with with cannot change password attribute.
+[array]$DomainUsersCannotChangePassword = $DomainUsers | Where {$_.CannotChangePassword -eq $True}
+Write-Host "Users who cannot change password ($($DomainUsersCannotChangePassword.Count))" -ForegroundColor Cyan
+ForEach ($DomainUserCannotChangePassword in $DomainUsersCannotChangePassword) {
+    Write-Host " - $($DomainUserCannotChangePassword.Name)" 
+}
 
 #Find all disabled users.
 [array]$DomainDisabledUsers = $DomainUsers | Where {$_.Enabled -eq $false }
 Write-Host "Disabled Users ($($DomainDisabledUsers.Count))" -ForegroundColor Cyan
 ForEach ($DomainDisabledUser in $DomainDisabledUsers) {
     Write-Host " - $($DomainDisabledUser.Name)" 
-}
-
-#Find all inactive users. For that, we use the value configure above with the maximum last logon date.
-#When an inactive account is not disabled or remains outside password expiration limits, perpetrators 
-#who try to hack into an organization can use these accounts because their activities will go unnoticed. 
-#In addition, employees who leave the organization can misuse their login credentials to access network 
-#resources.
-[array]$DomainEnabledInactiveUsers = $DomainEnabledUsers | Where { $_.LastLogonDate -le $LastLoggedOnDate }
-Write-Host "Inactive Users Users ($($DomainEnabledInactiveUsers.Count))" -ForegroundColor Cyan
-ForEach ($DomainEnabledInactiveUser in $DomainEnabledInactiveUsers) {
-    Write-Host " - $($DomainEnabledInactiveUser.Name)" 
 }
 
 #Find all users with Reversible Encryption. 
@@ -188,17 +206,4 @@ ForEach ($DomainUsersWithSIDHistory in $DomainUsersWithSIDHistoryArray) {
     Write-Host " - $($DomainUsersWithSIDHistory.Name)" 
 }
 
-#Find all user with Password Never Expire property. This account have a manual task to reset password.
-#If the password isn't change with a scheduled, this is a security risk.
-[array]$DomainUserPasswordNeverExpiresArray = $DomainUsers | Where {$_.PasswordNeverExpires -eq $True}
-Write-Host "Users with Password Never Expires ($($DomainUserPasswordNeverExpiresArray.Count))" -ForegroundColor Cyan
-ForEach ($DomainUserPasswordNeverExpires in $DomainUserPasswordNeverExpiresArray) {
-    Write-Host " - $($DomainUserPasswordNeverExpires.Name) ($($DomainUserPasswordNeverExpiresArray.PasswordLastSet))" 
-}
-
-#Find all user with with cannot change password attribute.
-[array]$DomainUsersCannotChangePassword = $DomainUsers | Where {$_.CannotChangePassword -eq $True}
-Write-Host "Users who cannot change password ($($DomainUsersCannotChangePassword.Count))" -ForegroundColor Cyan
-ForEach ($DomainUserCannotChangePassword in $DomainUsersCannotChangePassword) {
-    Write-Host " - $($DomainUserCannotChangePassword.Name)" 
-}
+Log -Text "Script ended"

@@ -48,13 +48,13 @@ Function Log {
         [Switch]$Warning
     )
     If($Error) {
-        $Text = "ERROR | $Text"
+        $Text = "ERROR   | $Text"
     }
     ElseIf($Warning) {
         $Text = "WARNING | $Text"
     }
     Else {
-        $Text = "INFO  | $Text"
+        $Text = "INFO    | $Text"
     }
     If ($Debug) {
         If($Error) {
@@ -466,20 +466,11 @@ Catch {
 
 #Adding SysVol folder information in the output file.
 Log -Text "Adding SysVol folder information in the output file"
-ForEach ($SysVolDetail in $SysVolDetails) {
-
-    #Adding SysVol folder information for the current server to output file
-    Log -Text "Adding SysVol folder information for $($SysVolDetail.Name) to output file"
-    Try {
-        Add-Content $Output "Server name                       : $($SysVolDetail.Name)"
-        Add-Content $Output "SysVol path                       : $($SysVolDetail.Path)"
-        Add-Content $Output "SysVol size                       : $($SysVolDetail.Size)"
-        Add-Content $Output " "
-    }
-    Catch {
-        Log -Text "An error occured during adding SysVol folder information for $($SysVolDetail.Name) to output file"
-    }
-
+Try {
+    $SysVolDetails | Format-Table -AutoSize | Out-File -FilePath $Output -Append -Encoding utf8
+}
+Catch {
+    Log -Text "An error occured during adding SysVol folder information to output file"
 }
 
 #Get details configuration for Domain Controller.
@@ -541,23 +532,11 @@ Catch {
 
 #Adding DC details informations in the output file.
 Log -Text "Adding DC details informations in the output file"
-ForEach ($DCDetail in $DCDetails) {
-
-    #Adding DC details informations for the current server to output file
-    Log -Text "Adding DC details informations for $($DCDetail.Name) to output file"
-    Try {
-        Add-Content $Output "Server name                       : $($DCDetail.Name)"
-        Add-Content $Output "IP Address                        : $($DCDetail.IPAddress)"
-        Add-Content $Output "Operating System                  : $($DCDetail.OperatingSystem)"
-        Add-Content $Output "Active Directory Site             : $($DCDetail.Site)"
-        Add-Content $Output "Global Catalog                    : $($DCDetail.GlobalCatalog)"
-        Add-Content $Output "Read-Only                         : $($DCDetail.ReadOnly)"
-        Add-Content $Output " "
-    }
-    Catch {
-        Log -Text "An error occured during adding DC details informations for $($DCDetail.Name) to output file"
-    }
-
+Try {
+    $DCDetails | Format-Table -AutoSize | Out-File -FilePath $Output -Append -Encoding utf8
+}
+Catch {
+    Log -Text "An error occured during adding DC details informations in the output file"
 }
 
 #Get Sites and Services informations.

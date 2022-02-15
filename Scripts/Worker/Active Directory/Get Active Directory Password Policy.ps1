@@ -1,6 +1,9 @@
 # **********************************************************************************
 # Script to retreive the Active Directory Password policy.
 #
+# This script will generate text file with all the collected information and
+# a log file with the information related to the script execution.
+#
 # If you need to troubleshoot the script, you can enable the Debug option in
 # the parameter. This will generate display information on the screen.
 #
@@ -9,8 +12,9 @@
 # ==================================================================================
 # 
 # Date        Par                 Modification
-# ----------  ------------------  -----------------------------------------------
+# ----------  ------------------  -------------------------------------------------
 # 2022-02-01  Benoit Blais        Original version
+# 2022-02-14  Benoit Blais        Add output file instead of displaying information
 # **********************************************************************************
 
 Param(
@@ -19,6 +23,14 @@ Param(
 
 #Default action when an error occured
 $ErrorActionPreference = "Stop"
+
+#Log file
+$ScriptPath = Split-Path -Parent -Path $MyInvocation.MyCommand.Definition
+$ScriptNameAndExtension = $MyInvocation.MyCommand.Definition.Split("\") | Select-Object -Last 1
+$ScriptName = $ScriptNameAndExtension.Split(".") | Select-Object -First 1
+$TimeStamp = (Get-Date).ToString("yyyy-MM-dd_HH-mm")
+$Log = "$($ScriptPath)\$($ScriptName)_$($TimeStamp).log"
+$Output = "$($ScriptPath)\$($ScriptName)_$($TimeStamp).txt"
 
 # **********************************************************************************
 
@@ -33,26 +45,43 @@ Function Log {
         [Switch]$Error,
         [Switch]$Warning
     )
+    If($Error) {
+        $Text = "ERROR   | $Text"
+    }
+    ElseIf($Warning) {
+        $Text = "WARNING | $Text"
+    }
+    Else {
+        $Text = "INFO    | $Text"
+    }
     If ($Debug) {
-        $Output = "$(Get-Date) |"
         If($Error) {
-            $Output += " ERROR   | $Text"
-            Write-Host $Output -ForegroundColor Red
-        }
-        ElseIf($Warning) {
-            $Output += " WARNING | $Text"
-            Write-Host $Output -ForegroundColor Yellow
-        }
-        Else {
-            $Output += " INFO    | $Text"
-            Write-Host $Output -ForegroundColor Green
+            Write-Host $Text -ForegroundColor Red
+        }ElseIf($Warning) {
+            Write-Host $Text -ForegroundColor Yellow
+        }Else {
+            Write-Host $Text -ForegroundColor Green
         }
     }
+    Try {Add-Content $Log "$(Get-Date) | $Text"} Catch {$Null}
 }
 
 # **********************************************************************************
 
 Log -Text "Script Begin"
+
+#Delete output file or text file if already exist.
+Log -Text "Validating if output or log file already exist"
+If (Get-ChildItem -Path $ScriptPath | Where-Object {($_.Name -match "$($ScriptName)") -and ($_.Name -notmatch "$($ScriptName).ps1") -and ($_.Name -notmatch "$($ScriptName)_$($TimeStamp).log") -and ($_.Name -notmatch "$($ScriptName)_$($TimeStamp).txt")}){
+    #Old file exist, we will try to delete it.
+    Log -Text "Deleting old output and log file"
+    Try {
+        Get-ChildItem -Path $ScriptPath | Where-Object {($_.Name -match "$($ScriptName)") -and ($_.Name -notmatch "$($ScriptName).ps1") -and ($_.Name -notmatch "$($ScriptName)_$($TimeStamp).log") -and ($_.Name -notmatch "$($ScriptName)_$($TimeStamp).txt")} | Remove-Item
+    }
+    Catch {
+        Log -Text "An error occured when deleting old output and log file"
+    }
+}
 
 #Validate if Active Directory module is currently loaded in Powershell session.
 Log -Text "Validating if Active Directory module is loaded in the currect Powershell session"
@@ -80,7 +109,7 @@ If (!(Get-Module | Where-Object {$_.Name -eq "ActiveDirectory"})){
     Else {
         
         #Active Directory module is not installed on the current computer.
-        Log -Text "ctive Directory module is not installed on the current computer" -Error
+        Log -Text "Active Directory module is not installed on the current computer" -Error
         #Because this script can't be run without this module, the script execution is stop.
         Break
     }
@@ -102,14 +131,141 @@ Catch {
     Break
 }
 
-Write-Host "Default Domain Password Policy" -ForegroundColor Cyan
-Write-Host "Complexity Enabled            : $($DomainPasswordPolicy.ComplexityEnabled)"
-Write-Host "Maximum Password Age          : $($DomainPasswordPolicy.MaxPasswordAge)"
-Write-Host "Minimum Password Age          : $($DomainPasswordPolicy.MinPasswordAge)"
-Write-Host "Password History Count        : $($DomainPasswordPolicy.PasswordHistoryCount)"
-Write-Host "Minimum Password Length       : $($DomainPasswordPolicy.MinPasswordLength)"
-Write-Host "Lockout Duration              : $($DomainPasswordPolicy.LockoutDuration)"
-Write-Host "Lockout Threshold             : $($DomainPasswordPolicy.LockoutThreshold)"
-Write-Host "Lockout Observation Window    : $($DomainPasswordPolicy.LockoutObservationWindow)"
-Write-Host "Reversible Encryption Enabled : $($DomainPasswordPolicy.ReversibleEncryptionEnabled)"
+#Adding "Active Directory Infomations" section title to output file.
+Log -Text 'Adding "Default Domain Password Policy" section title to output file'
+Try {
+    Add-Content $Output "Default Domain Password Policy"
+    Add-Content $Output "------------------------------"
+} 
+Catch {
+    Log -Text 'An error occured when "Default Domain Password Policy" section title to output file' -Error
+}
+
+#Adding "Complexity Enabled" to output file.
+Log -Text 'Adding "Complexity Enabled" to output file'
+Try {
+    If ($Null -ne $DomainPasswordPolicy.ComplexityEnabled) {
+        Add-Content $Output "Complexity Enabled                : $($DomainPasswordPolicy.ComplexityEnabled)"
+    } 
+    Else {
+        Add-Content $Output "Complexity Enabled                : No information found"
+    }
+}
+Catch {
+        Log -Text 'An error occured when adding "Complexity Enabled" to output file' -Error
+}
+
+#Adding "Maximum Password Age" to output file.
+Log -Text 'Adding "Maximum Password Age" to output file'
+Try {
+    If ($Null -ne $DomainPasswordPolicy.MaxPasswordAge) {
+        Add-Content $Output "Maximum Password Age              : $($DomainPasswordPolicy.MaxPasswordAge)"
+    } 
+    Else {
+        Add-Content $Output "Maximum Password Age              : No information found"
+    }
+}
+Catch {
+        Log -Text 'An error occured when adding "Maximum Password Age" to output file' -Error
+}
+
+#Adding "Minimum Password Age" to output file.
+Log -Text 'Adding "Minimum Password Age" to output file'
+Try {
+    If ($Null -ne $DomainPasswordPolicy.MinPasswordAge) {
+        Add-Content $Output "Minimum Password Age              : $($DomainPasswordPolicy.MinPasswordAge)"
+    } 
+    Else {
+        Add-Content $Output "Minimum Password Age              : No information found"
+    }
+}
+Catch {
+        Log -Text 'An error occured when adding "Minimum Password Age" to output file' -Error
+}
+
+#Adding "Password History Count" to output file.
+Log -Text 'Adding "Password History Count" to output file'
+Try {
+    If ($Null -ne $DomainPasswordPolicy.PasswordHistoryCount) {
+        Add-Content $Output "Password History Count            : $($DomainPasswordPolicy.PasswordHistoryCount)"
+    } 
+    Else {
+        Add-Content $Output "Password History Count            : No information found"
+    }
+}
+Catch {
+        Log -Text 'An error occured when adding "Password History Count" to output file' -Error
+}
+
+#Adding "Minimum Password Length" to output file.
+Log -Text 'Adding "Minimum Password Length" to output file'
+Try {
+    If ($Null -ne $DomainPasswordPolicy.MinPasswordLength) {
+        Add-Content $Output "Minimum Password Length           : $($DomainPasswordPolicy.MinPasswordLength)"
+    } 
+    Else {
+        Add-Content $Output "Minimum Password Length           : No information found"
+    }
+}
+Catch {
+        Log -Text 'An error occured when adding "Minimum Password Length" to output file' -Error
+}
+
+#Adding "Lockout Duration" to output file.
+Log -Text 'Adding "Lockout Duration" to output file'
+Try {
+    If ($Null -ne $DomainPasswordPolicy.LockoutDuration) {
+        Add-Content $Output "Lockout Duration                  : $($DomainPasswordPolicy.LockoutDuration)"
+    } 
+    Else {
+        Add-Content $Output "Lockout Duration                  : No information found"
+    }
+}
+Catch {
+        Log -Text 'An error occured when adding "Lockout Duration" to output file' -Error
+}
+
+#Adding "Lockout Threshold" to output file.
+Log -Text 'Adding "Lockout Threshold" to output file'
+Try {
+    If ($Null -ne $DomainPasswordPolicy.LockoutThreshold) {
+        Add-Content $Output "Lockout Threshold                 : $($DomainPasswordPolicy.LockoutThreshold)"
+    } 
+    Else {
+        Add-Content $Output "Lockout Threshold                 : No information found"
+    }
+}
+Catch {
+        Log -Text 'An error occured when adding "Lockout Threshold" to output file' -Error
+}
+
+#Adding "Lockout Observation Window" to output file.
+Log -Text 'Adding "Lockout Observation Window" to output file'
+Try {
+    If ($Null -ne $DomainPasswordPolicy.LockoutObservationWindow) {
+        Add-Content $Output "Lockout Observation Window        : $($DomainPasswordPolicy.LockoutObservationWindow)"
+    } 
+    Else {
+        Add-Content $Output "Lockout Observation Window        : No information found"
+    }
+}
+Catch {
+        Log -Text 'An error occured when adding "Lockout Observation Window" to output file' -Error
+}
+
+#Adding "Reversible Encryption Enabled" to output file.
+Log -Text 'Adding "Reversible Encryption Enabled" to output file'
+Try {
+    If ($Null -ne $DomainPasswordPolicy.ReversibleEncryptionEnabled) {
+        Add-Content $Output "Reversible Encryption Enabled     : $($DomainPasswordPolicy.ReversibleEncryptionEnabled)"
+    } 
+    Else {
+        Add-Content $Output "Reversible Encryption Enabled     : No information found"
+    }
+}
+Catch {
+        Log -Text 'An error occured when adding "Reversible Encryption Enabled" to output file' -Error
+}
+
+Log -Text "Script ended"
 
