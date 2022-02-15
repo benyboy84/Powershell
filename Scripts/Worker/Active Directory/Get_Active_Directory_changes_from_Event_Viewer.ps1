@@ -23,8 +23,8 @@ This script needs to be run directly on a Domain Controller and needs
 to be run "AS ADMINISTRATOR".
 
 .EXAMPLE
-./Get Active Directory Changes from Event Viewer.ps1 
-./Get Active Directory Changes from Event Viewer.ps1 -debug 
+./Get_Active_Directory_changes_from_Event_Viewer.ps1 
+./Get_Active_Directory_changes_from_Event_Viewer.ps1 -debug 
 
 .NOTES
 Author: Benoit Blais
