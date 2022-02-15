@@ -27,13 +27,13 @@ Function Log {
         [Switch]$Warning
     )
     If($Error) {
-        $Text = "ERROR | $Text"
+        $Text = "ERROR   | $Text"
     }
     ElseIf($Warning) {
         $Text = "WARNING | $Text"
     }
     Else {
-        $Text = "INFO  | $Text"
+        $Text = "INFO    | $Text"
     }
     If ($Debug) {
         If($Error) {
