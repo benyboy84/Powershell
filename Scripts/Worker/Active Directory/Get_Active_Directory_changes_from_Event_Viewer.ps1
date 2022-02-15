@@ -14,11 +14,10 @@ made to Active Directory. For entries to be present in the event log, the domain
 controller's auditing settings must be properly configured. This script will 
 generate text file with all collected information. 
 
-If you need to troubleshoot the script, you can enable the Debug option in the 
-parameter. This will generate display details informations in the screen and
-a log file with the information related to the script execution.
+This script accepts 1 parameter.
+-debug       This will generate display details informations in the screen and a log file with the information related to the script execution.
 
-IMPORTANT: 
+WARNING: 
 This script needs to be run directly on a Domain Controller and needs 
 to be run "AS ADMINISTRATOR".
 
