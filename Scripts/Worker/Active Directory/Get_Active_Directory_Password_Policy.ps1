@@ -1,21 +1,37 @@
-# **********************************************************************************
-# Script to retreive the Active Directory Password policy.
-#
-# This script will generate text file with all the collected information and
-# a log file with the information related to the script execution.
-#
-# If you need to troubleshoot the script, you can enable the Debug option in
-# the parameter. This will generate display information on the screen.
-#
-# This script use Active Directory module
-#
-# ==================================================================================
-# 
-# Date        Par                 Modification
-# ----------  ------------------  -------------------------------------------------
-# 2022-02-01  Benoit Blais        Original version
-# 2022-02-14  Benoit Blais        Add output file instead of displaying information
-# **********************************************************************************
+<#
+**********************************************************************************
+Script to retrieve the Active Directory Password policy.
+**********************************************************************************
+
+.SYNOPSIS
+Script to retrieve the Active Directory Password policy. 
+
+Version 1.0 of this script.
+Version 2.0 of this script add the output file instead of displaying the information.
+
+.DESCRIPTION
+This script uses the command Get-ADDefaultDomainPasswordPolicy to retrieve the Active 
+Directory Password policy.This script will generate text file with all collected 
+information. 
+
+If you need to troubleshoot the script, you can enable the Debug option in the 
+parameter. This will generate display details informations in the screen and
+a log file with the information related to the script execution.
+
+IMPORTANT: 
+This script use Active Directory module.
+
+.EXAMPLE
+./Get_Active_Directory_Password_Policy.ps1.ps1 
+./Get_Active_Directory_Password_Policy.ps1.ps1 -debug 
+
+.NOTES
+Author: Benoit Blais
+
+.LINK
+https://github.com/benyboy84/Powershell
+
+#>
 
 Param(
     [Switch]$Debug = $False
@@ -34,8 +50,8 @@ $Output = "$($ScriptPath)\$($ScriptName)_$($TimeStamp).txt"
 
 # **********************************************************************************
 
-#Log function will allow to display colored information in the PowerShell window
-#if debug mode is $TRUE.
+#Log function will allow to display colored information in the PowerShell window and
+#a log file with the information related to the script execution. if debug mode is $TRUE.
 #Parameters:
 #$Text : Text added to the text file.
 #$Error and $Warning: These switch need to be use to specify something else then an information.
@@ -57,29 +73,32 @@ Function Log {
     If ($Debug) {
         If($Error) {
             Write-Host $Text -ForegroundColor Red
+            Try {Add-Content $Log "$(Get-Date) | $Text"} Catch {$Null}
         }ElseIf($Warning) {
             Write-Host $Text -ForegroundColor Yellow
+            Try {Add-Content $Log "$(Get-Date) | $Text"} Catch {$Null}
         }Else {
             Write-Host $Text -ForegroundColor Green
+            Try {Add-Content $Log "$(Get-Date) | $Text"} Catch {$Null}
         }
     }
-    Try {Add-Content $Log "$(Get-Date) | $Text"} Catch {$Null}
 }
 
 # **********************************************************************************
 
-Log -Text "Script Begin"
+Log -Text "Script begin"
 
-#Delete output file or text file if already exist.
-Log -Text "Validating if output or log file already exist"
+#Delete output files if they already exist.
+Log -Text "Validating if outputs files already exists"
 If (Get-ChildItem -Path $ScriptPath | Where-Object {($_.Name -match "$($ScriptName)") -and ($_.Name -notmatch "$($ScriptName).ps1") -and ($_.Name -notmatch "$($ScriptName)_$($TimeStamp).log") -and ($_.Name -notmatch "$($ScriptName)_$($TimeStamp).txt")}){
-    #Old file exist, we will try to delete it.
-    Log -Text "Deleting old output and log file"
+    #Output files exists, we will try to delete it.
+    Log -Text "Deleting old output files"
     Try {
         Get-ChildItem -Path $ScriptPath | Where-Object {($_.Name -match "$($ScriptName)") -and ($_.Name -notmatch "$($ScriptName).ps1") -and ($_.Name -notmatch "$($ScriptName)_$($TimeStamp).log") -and ($_.Name -notmatch "$($ScriptName)_$($TimeStamp).txt")} | Remove-Item
     }
     Catch {
-        Log -Text "An error occured when deleting old output and log file"
+        Log -Text "An error occured when deleting old output files" -Error
+        Log -Text "$($PSItem.Exception.Message)" -Error
     }
 }
 
@@ -267,5 +286,5 @@ Catch {
         Log -Text 'An error occured when adding "Reversible Encryption Enabled" to output file' -Error
 }
 
-Log -Text "Script ended"
+Log -Text "Script end"
 
