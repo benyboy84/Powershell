@@ -19,6 +19,7 @@ This script accepts 3 parameters.
 -disable     This will disable SMBv1 protocol.
 
 WARNING:
+This script needs to be run directly on a Domain Controller and needs to be run "AS ADMINISTRATOR".
 Your system needs to reboot to take effect of the change.
 
 .EXAMPLE
