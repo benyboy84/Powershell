@@ -7,7 +7,6 @@ Script to get SMBv1 protocol.
 Script to get SMBv1 protocol. 
 
 Version 1.0 of this script.
-Version 2.0 of this script allows you to write the result of the script to an output file.
 
 .DESCRIPTION
 This script is use to get the state of the SMBv1 protocol. 
