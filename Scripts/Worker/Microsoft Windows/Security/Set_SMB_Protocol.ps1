@@ -25,11 +25,11 @@ This script needs to be run directly on a Domain Controller and needs to be run 
 Your system needs to reboot to take effect of the change.
 
 .EXAMPLE
-./Get_or_Set_SMB_Protocol.ps1 
-./Get_or_Set_SMB_Protocol.ps1 -debug
-./Get_or_Set_SMB_Protocol.ps1 -output
-./Get_or_Set_SMB_Protocol.ps1 -enable
-./Get_or_Set_SMB_Protocol.ps1 -disable
+./Set_SMB_Protocol.ps1 
+./Set_SMB_Protocol.ps1 -debug
+./Set_SMB_Protocol.ps1 -output
+./Set_SMB_Protocol.ps1 -enable
+./Set_SMB_Protocol.ps1 -disable
 
 .NOTES
 Author: Benoit Blais

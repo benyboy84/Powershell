@@ -21,9 +21,9 @@ This script needs to be run directly on a Domain Controller and needs to be run 
 Your system needs to reboot to take effect of the change.
 
 .EXAMPLE
-./Get_or_Set_SMB_Protocol.ps1 
-./Get_or_Set_SMB_Protocol.ps1 -debug
-./Get_or_Set_SMB_Protocol.ps1 -output
+./Get_SMB_Protocol.ps1 
+./Get_SMB_Protocol.ps1 -debug
+./Get_SMB_Protocol.ps1 -output
 
 .NOTES
 Author: Benoit Blais
