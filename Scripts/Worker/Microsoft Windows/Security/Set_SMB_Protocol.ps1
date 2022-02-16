@@ -14,7 +14,7 @@ This script is use to get the state of the SMBv1 protocol and enable or disable 
 
 By default this script will get the state of the protocol SMBv1.
 
-This script accepts 3 parameters.
+This script accepts 4 parameters.
 -debug       This will generate display details informations in the Powershell window and a log file with the information related to the script execution.
 -output      This will generate an output file instead of displaying information in the Powershell window.
 -enable      This will enable SMBv1 protocol.
@@ -27,6 +27,7 @@ Your system needs to reboot to take effect of the change.
 .EXAMPLE
 ./Get_or_Set_SMB_Protocol.ps1 
 ./Get_or_Set_SMB_Protocol.ps1 -debug
+./Get_or_Set_SMB_Protocol.ps1 -output
 ./Get_or_Set_SMB_Protocol.ps1 -enable
 ./Get_or_Set_SMB_Protocol.ps1 -disable
 
@@ -54,7 +55,7 @@ $ScriptNameAndExtension = $MyInvocation.MyCommand.Definition.Split("\") | Select
 $ScriptName = $ScriptNameAndExtension.Split(".") | Select-Object -First 1
 $TimeStamp = (Get-Date).ToString("yyyy-MM-dd_HH-mm")
 $Log = "$($ScriptPath)\$($ScriptName)_$($TimeStamp).log"
-$Output = "$($ScriptPath)\$($ScriptName)_$($TimeStamp).txt"
+$Outfile = "$($ScriptPath)\$($ScriptName)_$($TimeStamp).txt"
 
 # **********************************************************************************
 
@@ -107,7 +108,7 @@ Function Out {
 
         Log -Text "Adding information to the output file: $($Text)"
         Try {
-            $Text | Out-File -FilePath $Output -Append -Encoding utf8
+            $Text | Out-File -FilePath $file -Append -Encoding utf8
         } 
         Catch {
             Log -Text 'An error occured during adding information to the output file' -Error
@@ -148,58 +149,61 @@ Out -Text "SMBv1 protocol state : $($SMBv1.State)"
 
 #If enable parameter is present, enabling SMBv1 protocol.
 If ($Enable) {
-    Log -Text "Enabling SMBv1 protocol"
-    Try {
-        Enable-WindowsOptionalFeature -Online -FeatureName SMB1Protocol -NoRestart | Out-Null
-        $Text = "SMBv1 protocol is enabled"
-        Write-Host  $Text
-        Out -Text $Text
-        $Text = "You must restart your computer"
-        Write-Host $Text -ForegroundColor Yellow
-        Out -Text $Text -Warning 
+    If ($($SMBv1.State) -match "disabled") {
+        Log -Text "Enabling SMBv1 protocol"
+        Try {
+            Enable-WindowsOptionalFeature -Online -FeatureName SMB1Protocol -NoRestart | Out-Null
+            $Text = "SMBv1 protocol is enabled"
+            Write-Host  $Text
+            Out -Text $Text
+            $Text = "You must restart your computer"
+            Write-Host $Text -ForegroundColor Yellow
+            Out -Text $Text 
+        }
+        Catch {
+            $Text = "An error occured during enabling SMBv1 protocol"
+            Write-Host $Text -ForegroundColor Red
+            Write-Host "$($PSItem.Exception.Message)" -ForegroundColor Red
+            Out -Text $Text
+            Log -Text $Text -Error
+            Log -Text "$($PSItem.Exception.Message)" -Error
+        }
     }
-    Catch {
-        $Text = "An error occured during enabling SMBv1 protocol"
-        Write-Host $Text -ForegroundColor Red
-        Write-Host "$($PSItem.Exception.Message)" -ForegroundColor Red
+    Else {
+        $Text = "SMBv1 protocol is already disabled"
+        Write-Host $Text
         Out -Text $Text
-        Log -Text $Text -Error
-        Log -Text "$($PSItem.Exception.Message)" -Error
+        Log -Text $Text
     }
 }
 
 #If enable parameter is present, disabling SMBv1 protocol.
 If ($Disable) {
-    Log -Text "Disabling SMBv1 protocol"
-    Try {
-        Disable-WindowsOptionalFeature -Online -FeatureName SMB1Protocol -NoRestart
-        $Text = "SMBv1 protocol is disabled"
-        Write-Host  $Text
+    If ($($SMBv1.State) -match "enabled") {
+        Log -Text "Disabling SMBv1 protocol"
+        Try {
+            Disable-WindowsOptionalFeature -Online -FeatureName SMB1Protocol -NoRestart | Out-Null
+            $Text = "SMBv1 protocol is disabled"
+            Write-Host  $Text
+            Out -Text $Text
+            $Text = "You must restart your computer"
+            Write-Host $Text -ForegroundColor Yellow
+            Out -Text $Text 
+        }
+        Catch {
+            $Text = "An error occured during disabling SMBv1 protocol"
+            Write-Host $Text -ForegroundColor Red
+            Write-Host "$($PSItem.Exception.Message)" -ForegroundColor Red
+            Out -Text $Text
+            Log -Text $Text -Error
+            Log -Text "$($PSItem.Exception.Message)" -Error
+        }
+    }
+    Else {
+        $Text = "SMBv1 protocol is already disabled"
+        Write-Host $Text
         Out -Text $Text
-        $Text = "You must restart your computer"
-        Write-Host $Text -ForegroundColor Yellow
-        Out -Text $Text -Warning 
-    }
-    Catch {
-        $Text = "An error occured during disabling SMBv1 protocol"
-        Write-Host $Text -ForegroundColor Red
-        Write-Host "$($PSItem.Exception.Message)" -ForegroundColor Red
-        Out -Text $Text
-        Log -Text $Text -Error
-        Log -Text "$($PSItem.Exception.Message)" -Error
-    }
-}
-
-#If enable parameter is present, disabling SMBv1 protocol.
-If ($Disable) {
-    Log -Text "Disabling SMBv1 protocol"
-    Try {
-        Disable-WindowsOptionalFeature -Online -FeatureName SMB1Protocol -NoRestart
-        Log -Text "SMBv1 protocol is disabled"
-        Log -Text "You must restart your computer" -Warning
-    }
-    Catch {
-        Log -Text "An error occured during disabling SMBv1 protocol."
+        Log -Text $Text
     }
 }
 
