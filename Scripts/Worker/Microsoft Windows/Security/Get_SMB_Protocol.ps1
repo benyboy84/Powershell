@@ -17,8 +17,7 @@ This script accepts 2 parameters.
 -output      This will generate an output file instead of displaying information in the Powershell window.
 
 WARNING:
-This script needs to be run directly on a Domain Controller and needs to be run "AS ADMINISTRATOR".
-Your system needs to reboot to take effect of the change.
+This script needs to be run "AS ADMINISTRATOR".
 
 .EXAMPLE
 ./Get_SMB_Protocol.ps1 
