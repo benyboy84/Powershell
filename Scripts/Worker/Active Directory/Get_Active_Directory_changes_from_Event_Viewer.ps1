@@ -59,7 +59,7 @@ $ActiveDirectoryChanges = @(
     #New-Object PSObject -Property @{EventID = "5139";Description = "A directory service object was moved"}
     #New-Object PSObject -Property @{EventID = "5141";Description = "A directory service object was deleted"}
     New-Object PSObject -Property @{EventID = "4720";Description = "A user account was created"}
-    New-Object PSObject -Property @{EventID = "4722";Description = "A user accound was enabled"}
+    New-Object PSObject -Property @{EventID = "4722";Description = "A user account was enabled"}
     New-Object PSObject -Property @{EventID = "4723";Description = "An attempt was made to change an accounts password"}
     New-Object PSObject -Property @{EventID = "4724";Description = "An attempt was made to reset an accounts password"}
     New-Object PSObject -Property @{EventID = "4725";Description = "A user account was disabled"}
