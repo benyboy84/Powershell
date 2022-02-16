@@ -142,10 +142,17 @@ Try {
 }
 Catch {
     Log -Text "An error occured during getting the state of SMBv1 protocol" -Error
+    $Text = "Unable to get SMBv1 state"
+    Write-Host $Text -ForegroundColor Red
+    Out -Text $Text
+    #Because this script can't run without the original state, this script execution will be stop.
+    Log -Text "Script end"
+    Break
 }
 
-Write-Host "SMBv1 protocol state : $($SMBv1.State)" -ForegroundColor Cyan
-Out -Text "SMBv1 protocol state : $($SMBv1.State)"
+Write-Host $Text -ForegroundColor Cyan
+Out -Text $Text
+
 
 #If enable parameter is present, enabling SMBv1 protocol.
 If ($Enable) {
