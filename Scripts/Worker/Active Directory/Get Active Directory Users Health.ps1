@@ -134,7 +134,7 @@ Write-Host "More then 2 years                  : $($Count.Count)"
 [array]$DomainUserPasswordNeverExpiresArray = $DomainUsers | Where {$_.PasswordNeverExpires -eq $True}
 Write-Host "Users with Password Never Expires ($($DomainUserPasswordNeverExpiresArray.Count))" -ForegroundColor Cyan
 ForEach ($DomainUserPasswordNeverExpires in $DomainUserPasswordNeverExpiresArray) {
-    Write-Host " - $($DomainUserPasswordNeverExpires.Name) ($($DomainUserPasswordNeverExpiresArray.PasswordLastSet))" 
+    Write-Host " - $($DomainUserPasswordNeverExpires.Name) ($($DomainUserPasswordNeverExpires.PasswordLastSet))" 
 }
 
 #Find all user with with cannot change password attribute.
