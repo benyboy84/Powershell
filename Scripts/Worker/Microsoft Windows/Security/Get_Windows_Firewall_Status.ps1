@@ -16,7 +16,7 @@ This script accepts 2 parameters.
 -output      This will generate an output file instead of displaying information in the Powershell window.
 
 WARNING:
-This script needs to be run directly on a Domain Controller and needs to be run "AS ADMINISTRATOR".
+This script needs to be run directly on a server and needs to be run "AS ADMINISTRATOR".
 
 
 .EXAMPLE
