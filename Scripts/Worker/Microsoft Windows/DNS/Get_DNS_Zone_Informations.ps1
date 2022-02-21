@@ -180,10 +180,10 @@ ForEach ($DNSZone in ($DNSZones | Where-Object {!($_.IsReverseLookupZone)})) {
             $Object.Status = "Paused"
         }
             
-        Switch ($Info.AlowUpdate) {
+        Switch ($Info.AllowUpdate) {
             0 {$Object.DynamicUpdates = "None"}
             1 {$Object.DynamicUpdates = "Nonsecure and secure"}
-            3 {$Object.DynamicUpdates = "Secure only"}
+            2 {$Object.DynamicUpdates = "Secure only"}
         }
     }
     Catch{
@@ -259,7 +259,7 @@ ForEach ($DNSZone in ($DNSZones | Where-Object {!($_.IsReverseLookupZone)})) {
     Try {
         $DynamicHost = $Null
         [Array]$DynamicHost = Get-DnsServerResourceRecord -ZoneName $DNSZone.ZoneName -RRType A  | Where-Object {($_.Timestamp -ne $Null) -and ($_.Hostname -ne "@") -and ($_.Hostname -ne "DomainDnsZones") -and ($_.Hostname -ne "ForestDnsZones")}
-        $Object.DynamicHost = $DynamicsHost.Count
+        $Object.DynamicHost = $DynamicHost.Count
     }
     Catch {
         Log -Text "An error occured during getting all dynamic A records for zone $($DNSZone.ZoneName)" -Error
@@ -352,10 +352,10 @@ ForEach ($DNSZone in ($DNSZones | Where-Object {$_.IsReverseLookupZone})) {
             $Object.Status = "Paused"
         }
             
-        Switch ($Info.AlowUpdate) {
+        Switch ($Info.AllowUpdate) {
             0 {$Object.DynamicUpdates = "None"}
             1 {$Object.DynamicUpdates = "Nonsecure and secure"}
-            3 {$Object.DynamicUpdates = "Secure only"}
+            2 {$Object.DynamicUpdates = "Secure only"}
         }
     }
     Catch{
