@@ -115,11 +115,31 @@ Catch {
 
 $Text = "DNS zone(s) informations"
 Write-Host $Text -ForegroundColor Cyan
-Out -Text $Text
+If ($Output) {
+
+    Log -Text "Adding information to the output file: $($Text)"
+    Try {
+        $Text | Out-File -FilePath $Outfile -Append -Encoding utf8 -Width 3000
+    } 
+    Catch {
+        Log -Text 'An error occured during adding information to the output file' -Error
+    }
+
+}
 
 $Text = "DNS Forward Zone(s) Informations"
 Write-Host $Text -ForegroundColor DarkCyan
-Out -Text $Text
+If ($Output) {
+
+    Log -Text "Adding information to the output file: $($Text)"
+    Try {
+        $Text | Out-File -FilePath $Outfile -Append -Encoding utf8 -Width 3000
+    } 
+    Catch {
+        Log -Text 'An error occured during adding information to the output file' -Error
+    }
+
+}
 
 #Looping through each forward zone to get informations.
 Log -Text "Looping through each forward zone to get informations"
@@ -282,7 +302,17 @@ If ($Output) {
 
 $Text = "DNS Reverse Zone(s) Informations"
 Write-Host $Text -ForegroundColor DarkCyan
-Out -Text $Text
+If ($Output) {
+
+    Log -Text "Adding information to the output file: $($Text)"
+    Try {
+        $Text | Out-File -FilePath $Outfile -Append -Encoding utf8 -Width 3000
+    } 
+    Catch {
+        Log -Text 'An error occured during adding information to the output file' -Error
+    }
+
+}
 
 #Looping through each reverse zone to get informations.
 Log -Text "Looping through each reverse zone to get informations"
