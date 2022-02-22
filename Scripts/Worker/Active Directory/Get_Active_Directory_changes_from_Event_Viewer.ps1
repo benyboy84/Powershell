@@ -237,7 +237,19 @@ If ($Null -ne $ActiveDirectoryChangesEvents) {
         $Object.Description = $ActiveDirectoryChanges | Where-Object {$_.EventID -eq $Event.InstanceId} | Select-Object Description -ExpandProperty Description
         #Line 10 in the message should display the information "Account Name:" follow by the object name.
         #This is why we will extract the second part of that line to know which object was affected.
-        $Object.Object = ((($Event.Message -split '\n')[10]).Split(":") | Select-Object -Last 1).Trim()
+        $ADObject = ((($Event.Message -split '\n')[10]).Split(":") | Select-Object -Last 1).Trim()
+        #If line 10 contain the DistinguishedName of the object, we will try to get the SamAccountName
+        If ($ADObject -match "CN="){
+            Log -Text "Line 10 contain the DistinguishedName of the object, we will try to get the SamAccountName"
+            Try {
+                $ADObject = Get-ADUser -Filter "DistinguishedName -eq ""$($ADObject)""" | Select-Object SamAccountName -ExpandProperty SamAccountName
+            }
+            Catch {
+                Log -Text "Unable to get the SamAccountName instead of the DistinguishedName" -Warning
+                $ADObject = ((($Event.Message -split '\n')[10]).Split(":") | Select-Object -Last 1).Trim()
+            }
+        }
+        $Object.Object = $ADObject
         $Result += $Object
     }
 }
