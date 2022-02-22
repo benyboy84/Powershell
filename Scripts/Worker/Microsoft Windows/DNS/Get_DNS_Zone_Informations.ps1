@@ -215,10 +215,10 @@ ForEach ($DNSZone in ($DNSZones | Where-Object {!($_.IsReverseLookupZone)})) {
     Try {
         $SOA = $Null
         $SOA = Get-DnsServerResourceRecord -ZoneName $DNSZone.ZoneName -RRType Soa
-        $Object.SOA_RefreshInterval = "$($SOA.RecordData.RefreshInterval.Days) : $($SOA.RecordData.RefreshInterval.Hours) : $($SOA.RecordData.RefreshInterval.Minutes) : $($SOA.RecordData.RefreshInterval.Seconds)"
-        $Object.SOA_RetryInterval = "$($SOA.RecordData.RetryDelay.Days) : $($SOA.RecordData.RetryDelay.Hours) : $($SOA.RecordData.RetryDelay.Minutes) : $($SOA.RecordData.RetryDelay.Seconds)"
-        $Object.SOA_ExpiresAfter = "$($SOA.RecordData.ExpireLimit.Days) : $($SOA.RecordData.ExpireLimit.Hours) : $($SOA.RecordData.ExpireLimit.Minutes) : $($SOA.RecordData.ExpireLimit.Seconds)"
-        $Object.SOA_MinimumTimeToLive = "$($SOA.RecordData.MinimumTimeToLive.Days) : $($SOA.RecordData.MinimumTimeToLive.Hours) : $($SOA.RecordData.MinimumTimeToLive.Minutes) : $($SOA.RecordData.MinimumTimeToLive.Seconds)"
+        $Object.SOA_RefreshInterval = "$($SOA.RecordData.RefreshInterval.Days):$($SOA.RecordData.RefreshInterval.Hours):$($SOA.RecordData.RefreshInterval.Minutes):$($SOA.RecordData.RefreshInterval.Seconds)"
+        $Object.SOA_RetryInterval = "$($SOA.RecordData.RetryDelay.Days):$($SOA.RecordData.RetryDelay.Hours):$($SOA.RecordData.RetryDelay.Minutes):$($SOA.RecordData.RetryDelay.Seconds)"
+        $Object.SOA_ExpiresAfter = "$($SOA.RecordData.ExpireLimit.Days):$($SOA.RecordData.ExpireLimit.Hours):$($SOA.RecordData.ExpireLimit.Minutes):$($SOA.RecordData.ExpireLimit.Seconds)"
+        $Object.SOA_MinimumTimeToLive = "$($SOA.RecordData.MinimumTimeToLive.Days):$($SOA.RecordData.MinimumTimeToLive.Hours):$($SOA.RecordData.MinimumTimeToLive.Minutes):$($SOA.RecordData.MinimumTimeToLive.Seconds)"
     }
     Catch {
         Log -Text "An error occured during getting zone $($DNSZone.ZoneName) Start of Authority (SOA) informations" -Error
