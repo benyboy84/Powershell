@@ -129,6 +129,7 @@ If (Get-ChildItem -Path $ScriptPath | Where-Object {($_.Name -match "$($ScriptNa
 Log -Text "Getting the state of SMBv1 protocol"
 Try {
     $SMBv1 = Get-WindowsOptionalFeature -Online -FeatureName SMB1Protocol
+    $Text = "SMBv1 protocol is $($SMBv1.State)"
 }
 Catch {
     Log -Text "An error occured during getting the state of SMBv1 protocol" -Error
