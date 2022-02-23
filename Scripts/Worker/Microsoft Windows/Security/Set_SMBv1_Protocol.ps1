@@ -150,7 +150,7 @@ Catch {
     Break
 }
 
-$Text = "SMBv1 protocol is Status"
+$Text = "SMBv1 protocol Status"
 Write-Host $Text -ForegroundColor Cyan
 Out -Text $Text
 
