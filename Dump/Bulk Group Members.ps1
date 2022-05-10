@@ -13,7 +13,7 @@ Foreach ($User in $List) {
     $Groups = $User.Group
 
     # Retrieve SamAccountName and ADGroup
-    $ADSam = Get-ADUser -Filter "Name -eq ""$($UserName)""" | Select-Object SamAccountName
+    $ADSam = Get-ADUser -Filter "Name -eq ""$($UserName)""" | Select-Object SamAccountName -ExpandProperty SamAccountName
     $ADGroups = Get-ADGroup -Filter * | Select-Object Name
 
     # User does not exist in AD
