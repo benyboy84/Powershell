@@ -17,12 +17,12 @@ Foreach ($User in $List) {
     $ADGroups = Get-ADGroup -Filter * | Select-Object Name
 
     # User does not exist in AD
-    if ($ADSam -eq $null) {
+    if ($null -eq $ADSam) {
         Write-Host "$UserName does not exist in AD" -ForegroundColor Red
         Continue
     }
     # User does not have a group specified in CSV file
-    if ($Groups -eq $null) {
+    if ($null -eq $Groups) {
         Write-Host "$UserName has no group specified in CSV file" -ForegroundColor Yellow
         Continue
     }
