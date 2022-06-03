@@ -1,24 +1,24 @@
 <#
 **********************************************************************************
-Script to remove Groove applications under user context
+Script to remove AI Meeting Manager applications under user context
 **********************************************************************************
 
 .SYNOPSIS
-Script to remove Groove applications under user context.
+Script to remove AI Meeting Manager applications under user context.
 
 Version 1.0 of this script.
 
 .DESCRIPTION
-This script is use to remove Groove applications under user context. 
+This script is use to remove AI Meeting Manager applications under user context. 
 
 This script accepts 2 parameters.
 -debug       This will generate display details informations in the Powershell window and a log file with the information related to the script execution.
 -output      This will generate an output file instead of displaying information in the Powershell window.
 
 .EXAMPLE
-./RemoveGrooveApps.ps1 
-./RemoveGrooveApps.ps1  -debug
-./RemoveGrooveApps.ps1  -output <path>
+./RemoveAIMeetingManager.ps1 
+./RemoveAIMeetingManager.ps1  -debug
+./RemoveAIMeetingManager.ps1  -output <path>
 
 .NOTES
 Author: Benoit Blais
@@ -31,14 +31,14 @@ https://github.com/benyboy84/Powershell
 Param(
     [String]$Application,
     [Switch]$Debug = $False,
-    [String]$Output = "C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\RemoveGrooveApps.log"
+    [String]$Output = "C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\RemoveAIMeetingManager.log"
 )
 
 #Default action when an error occured
 $ErrorActionPreference = "Stop"
 
 #Windows Application to remove
-$Applications = @("Microsoft.ZuneMusic")
+$Applications = @("E046963F.AIMeetingManager")
 
 # **********************************************************************************
 
@@ -151,3 +151,4 @@ Else {
     Exit 0
 
 }
+

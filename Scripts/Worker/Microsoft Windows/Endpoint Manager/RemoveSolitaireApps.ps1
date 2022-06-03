@@ -31,7 +31,7 @@ https://github.com/benyboy84/Powershell
 Param(
     [String]$Application,
     [Switch]$Debug = $False,
-    [String]$Output
+    [String]$Output = "C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\RemoveSolitaireApps.log"
 )
 
 #Default action when an error occured
@@ -122,19 +122,33 @@ Try {
 }
 Catch {
     Log -Text "Unable to get installed packages to remove." -Error
+    Log -Test "$($PSItem.Exception.Message)" -Error
+    Write-Error -Message "Unable to get installed packages to remove."
     Exit 1
 }
 
-#Lopp into each installed package to remove.
-ForEach ($AppxPackage in $AppxPackages) {
+If ($AppxPackages.Count -ne 0) {
+    
+    #Lopp into each installed package to remove.
+    ForEach ($AppxPackage in $AppxPackages) {
 
-    Try {
-        Log -Text "Removing $($AppxPackage.Name)..."
-        Get-AppxPackage $AppxPackage.Name | Remove-AppxPackage
-        Log -Text "Package $($AppxPackage.Name) succesfully removed."
+        Try {
+            Log -Text "Removing $($AppxPackage.Name)..."
+            Get-AppxPackage $AppxPackage.Name | Remove-AppxPackage
+            Log -Text "Package $($AppxPackage.Name) succesfully removed."
+        }
+        Catch {
+            Log -Text "Unable to remove $($AppxPackage.Name)" -Error
+            Log -Test "$($PSItem.Exception.Message)" -Error
+            Write-Error -Message "Unable to remove $($AppxPackage.Name)"
+        }
     }
-    Catch {
-        Log -Text "Unable to remove $($AppxPackage.Name)" -Error
-    }
+
+}
+Else {
+
+    Log -Text "Application not installed"
+    Exit 0
+
 }
 
