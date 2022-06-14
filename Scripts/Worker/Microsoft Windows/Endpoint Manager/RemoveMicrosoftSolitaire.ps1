@@ -16,9 +16,9 @@ This script accepts 2 parameters.
 -output      This will generate an output file instead of displaying information in the Powershell window.
 
 .EXAMPLE
-./RemoveSolitaireApps.ps1 
-./RemoveSolitaireApps.ps1  -debug
-./RemoveSolitaireApps.ps1  -output <path>
+./RemoveMicrosoftSolitaire.ps1 
+./RemoveMicrosoftSolitaire.ps1  -debug
+./RemoveMicrosoftSolitaire.ps1  -output <path>
 
 .NOTES
 Author: Benoit Blais
@@ -31,7 +31,7 @@ https://github.com/benyboy84/Powershell
 Param(
     [String]$Application,
     [Switch]$Debug = $False,
-    [String]$Output = "C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\RemoveSolitaireApps.log"
+    [String]$Output = "C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\RemoveMicrosoftSolitaire.log"
 )
 
 #Default action when an error occured
@@ -117,12 +117,12 @@ Try {
     Log -Text "Getting all installed packages to remove."
     $AppxPackages = @()
     ForEach ($Application in $Applications) {
-        $AppxPackages += Get-AppxPackage $Application
+        $AppxPackages += Get-AppxPackage $Application -AllUsers
     }
 }
 Catch {
     Log -Text "Unable to get installed packages to remove." -Error
-    Log -Test "$($PSItem.Exception.Message)" -Error
+    Log -Text "$($PSItem.Exception.Message)" -Error
     Write-Error -Message "Unable to get installed packages to remove."
     Exit 1
 }
@@ -134,14 +134,15 @@ If ($AppxPackages.Count -ne 0) {
 
         Try {
             Log -Text "Removing $($AppxPackage.Name)..."
-            Get-AppxPackage $AppxPackage.Name | Remove-AppxPackage
-            Log -Text "Package $($AppxPackage.Name) succesfully removed."
+            Get-AppxPackage $AppxPackage.Name -AllUsers | Remove-AppxPackage
         }
         Catch {
-            Log -Text "Unable to remove $($AppxPackage.Name)" -Error
-            Log -Test "$($PSItem.Exception.Message)" -Error
-            Write-Error -Message "Unable to remove $($AppxPackage.Name)"
+            Log -Text "An error occurred during the removal of $($AppxPackage.Name)."
+            Log -Text "$($PSItem.Exception.Message)" -Error
+            Write-Error -Message "An error occurred during the removal of $($AppxPackage.Name)."
+            Exit 1
         }
+
     }
 
 }
@@ -151,4 +152,3 @@ Else {
     Exit 0
 
 }
-

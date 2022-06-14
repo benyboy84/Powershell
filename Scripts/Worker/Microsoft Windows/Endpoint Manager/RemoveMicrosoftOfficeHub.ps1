@@ -1,24 +1,24 @@
 <#
 **********************************************************************************
-Script to remove Xbox applications under user context
+Script to remove Microsoft Office Hub applications under user context
 **********************************************************************************
 
 .SYNOPSIS
-Script to remove Xbox applications under user context.
+Script to remove Microsoft Office Hub applications under user context.
 
 Version 1.0 of this script.
 
 .DESCRIPTION
-This script is use to remove Xbox applications under user context. 
+This script is use to remove Microsoft Office Hub applications under user context. 
 
 This script accepts 2 parameters.
 -debug       This will generate display details informations in the Powershell window and a log file with the information related to the script execution.
 -output      This will generate an output file instead of displaying information in the Powershell window.
 
 .EXAMPLE
-./RemoveXboxApps.ps1 
-./RemoveXboxApps.ps1  -debug
-./RemoveXboxApps.ps1  -output <path>
+./RemoveMicrosoftOfficeHub.ps1 
+./RemoveMicrosoftOfficeHub.ps1  -debug
+./RemoveMicrosoftOfficeHub.ps1  -output <path>
 
 .NOTES
 Author: Benoit Blais
@@ -31,19 +31,14 @@ https://github.com/benyboy84/Powershell
 Param(
     [String]$Application,
     [Switch]$Debug = $False,
-    [String]$Output = "C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\RemoveXboxApps.log"
+    [String]$Output = "C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\RemoveMicrosoftOfficeHub.log"
 )
 
 #Default action when an error occured
 $ErrorActionPreference = "Stop"
 
 #Windows Application to remove
-$Applications = @("Microsoft.Xbox.TCUI",
-                  "Microsoft.XboxApp",
-                  "Microsoft.XboxGameOverlay",
-                  "Microsoft.XboxGamingOverlay",
-                  "Microsoft.XboxSpeechToTextOverlay",
-                  "Microsoft.XboxIdentityProvider")
+$Applications = @("Microsoft.MicrosoftOfficeHub")
 
 # **********************************************************************************
 
@@ -122,12 +117,12 @@ Try {
     Log -Text "Getting all installed packages to remove."
     $AppxPackages = @()
     ForEach ($Application in $Applications) {
-        $AppxPackages += Get-AppxPackage $Application
+        $AppxPackages += Get-AppxPackage $Application -AllUsers
     }
 }
 Catch {
     Log -Text "Unable to get installed packages to remove." -Error
-    Log -Test "$($PSItem.Exception.Message)" -Error
+    Log -Text "$($PSItem.Exception.Message)" -Error
     Write-Error -Message "Unable to get installed packages to remove."
     Exit 1
 }
@@ -139,14 +134,15 @@ If ($AppxPackages.Count -ne 0) {
 
         Try {
             Log -Text "Removing $($AppxPackage.Name)..."
-            Get-AppxPackage $AppxPackage.Name | Remove-AppxPackage
-            Log -Text "Package $($AppxPackage.Name) succesfully removed."
+            Get-AppxPackage $AppxPackage.Name -AllUsers | Remove-AppxPackage
         }
         Catch {
-            Log -Text "Unable to remove $($AppxPackage.Name)" -Error
-            Log -Test "$($PSItem.Exception.Message)" -Error
-            Write-Error -Message "Unable to remove $($AppxPackage.Name)"
+            Log -Text "An error occurred during the removal of $($AppxPackage.Name)."
+            Log -Text "$($PSItem.Exception.Message)" -Error
+            Write-Error -Message "An error occurred during the removal of $($AppxPackage.Name)."
+            Exit 1
         }
+
     }
 
 }
