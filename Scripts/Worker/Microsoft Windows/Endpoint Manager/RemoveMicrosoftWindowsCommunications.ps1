@@ -1,15 +1,15 @@
 <#
 **********************************************************************************
-Script to remove Mail $ Calendar applications under user context
+Script to remove Mail & Calendar applications under user context
 **********************************************************************************
 
 .SYNOPSIS
-Script to remove Mail $ Calendar applications under user context.
+Script to remove Mail & Calendar applications under user context.
 
 Version 1.0 of this script.
 
 .DESCRIPTION
-This script is use to remove Mail $ Calendar applications under user context. 
+This script is use to remove Mail & Calendar applications under user context. 
 
 This script accepts 2 parameters.
 -debug       This will generate display details informations in the Powershell window and a log file with the information related to the script execution.
