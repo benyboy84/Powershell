@@ -1,24 +1,24 @@
 <#
 **********************************************************************************
-Script to remove AI Meeting Manager applications under user context
+Script to remove Mail & Calendar applications under user context
 **********************************************************************************
 
 .SYNOPSIS
-Script to remove AI Meeting Manager applications under user context.
+Script to remove Mail & Calendar applications under user context.
 
 Version 1.0 of this script.
 
 .DESCRIPTION
-This script is use to remove AI Meeting Manager applications under user context. 
+This script is use to remove Mail & Calendar applications under user context. 
 
 This script accepts 2 parameters.
 -debug       This will generate display details informations in the Powershell window and a log file with the information related to the script execution.
 -output      This will generate an output file instead of displaying information in the Powershell window.
 
 .EXAMPLE
-./RemoveAIMeetingManager.ps1 
-./RemoveAIMeetingManager.ps1  -debug
-./RemoveAIMeetingManager.ps1  -output <path>
+./RemoveMicrosoftWindowsCommunications.ps1 
+./RemoveMicrosoftWindowsCommunications.ps1  -debug
+./RemoveMicrosoftWindowsCommunications.ps1  -output <path>
 
 .NOTES
 Author: Benoit Blais
@@ -31,14 +31,14 @@ https://github.com/benyboy84/Powershell
 Param(
     [String]$Application,
     [Switch]$Debug = $False,
-    [String]$Output = "C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\RemoveAIMeetingManager.log"
+    [String]$Output = "C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\RemoveMicrosoftWindowsCommunications.log"
 )
 
 #Default action when an error occured
 $ErrorActionPreference = "Stop"
 
 #Windows Application to remove
-$Applications = @("E046963F.AIMeetingManager")
+$Applications = @("Microsoft.windowscommunicationsapps")
 
 # **********************************************************************************
 
@@ -134,7 +134,7 @@ If ($AppxPackages.Count -ne 0) {
 
         Try {
             Log -Text "Removing $($AppxPackage.Name)..."
-            Get-AppxPackage $AppxPackage.Name -AllUsers | Remove-AppxPackage
+            Get-AppxPackage $AppxPackage.Name -AllUsers | Remove-AppxPackage -AllUsers
         }
         Catch {
             Log -Text "An error occurred during the removal of $($AppxPackage.Name)."
