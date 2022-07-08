@@ -134,10 +134,11 @@ If ($AppxPackages.Count -ne 0) {
 
         Try {
             Log -Text "Removing $($AppxPackage.Name)..."
-            Get-AppxPackage $AppxPackage.Name -AllUsers | Remove-AppxPackage
+            Get-AppXProvisionedPackage -Online | Where-Object DisplayName -eq $AppxPackage.Name | Remove-AppxProvisionedPackage -Online
+            Get-AppxPackage $AppxPackage.Name -AllUsers | Remove-AppxPackage -AllUsers
         }
         Catch {
-            Log -Text "An error occurred during the removal of $($AppxPackage.Name)."
+            Log -Text "An error occurred during the removal of $($AppxPackage.Name)." -Error
             Log -Text "$($PSItem.Exception.Message)" -Error
             Write-Error -Message "An error occurred during the removal of $($AppxPackage.Name)."
             Exit 1
