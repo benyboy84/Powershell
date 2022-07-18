@@ -105,7 +105,7 @@ ForEach ($Item in $ListOfDCs){
 #Getting the current value of the Delivery Controller or Cloud Connector if use with Citrix Cloud.
 Log -Text "Getting the current value of the Delivery Controller or Cloud Connector if use with Citrix Cloud"
 If (Test-Path "HKLM:\SOFTWARE\Citrix\VirtualDesktopAgent") {
-    If (Get-ItemProperty "HKLM:\SOFTWARE\Citrix\VirtualDesktopAgent" "ListOfDCs" -ErrorAction SilentlyContinue) {
+    If (Get-ItemProperty "HKLM:\SOFTWARE\Citrix\VirtualDesktopAgent" "ListOfDDCs" -ErrorAction SilentlyContinue) {
         Try {
             $Value = Get-ItemPropertyValue 'HKLM:\SOFTWARE\Citrix\VirtualDesktopAgent' -Name "ListOfDCs"
         }
