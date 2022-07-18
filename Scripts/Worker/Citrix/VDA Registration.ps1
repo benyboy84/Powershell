@@ -39,7 +39,7 @@ Param(
 
 #New Delivery Controller or Cloud Connector if use with Citrix Cloud
 #You have tu use the FQDN.
-$ListOfDCs = @("WVM-CTXCL-P01.gazmet.com","WVB-CTXCL-P01.gazmet.com")
+$ListOfDDCs = @("WVM-CTXCL-P01.gazmet.com","WVB-CTXCL-P01.gazmet.com")
 
 # *******************************************************************************
 
@@ -93,11 +93,11 @@ Function Log {
 
 Log -Text "Script begin"
 
-#Validating value of ListOfDCs.
-Log -Text "Validating value of ListOfDCs"
-ForEach ($Item in $ListOfDCs){
+#Validating value of ListOfDDCs.
+Log -Text "Validating value of ListOfDDCs"
+ForEach ($Item in $ListOfDDCs){
     If (($Item.Split(".")).Count -lt 3) {
-        Log -Text "Value contain in ListOfDCs is not an FQDN" -Error
+        Log -Text "Value contain in ListOfDDCs is not an FQDN" -Error
         Exit 1
     }
 }
@@ -107,7 +107,7 @@ Log -Text "Getting the current value of the Delivery Controller or Cloud Connect
 If (Test-Path "HKLM:\SOFTWARE\Citrix\VirtualDesktopAgent") {
     If (Get-ItemProperty "HKLM:\SOFTWARE\Citrix\VirtualDesktopAgent" "ListOfDDCs" -ErrorAction SilentlyContinue) {
         Try {
-            $Value = Get-ItemPropertyValue 'HKLM:\SOFTWARE\Citrix\VirtualDesktopAgent' -Name "ListOfDCs"
+            $Value = Get-ItemPropertyValue 'HKLM:\SOFTWARE\Citrix\VirtualDesktopAgent' -Name "ListOfDDCs"
         }
         Catch {
             Log -Text "An error occured when getting property value" -Error
@@ -116,7 +116,7 @@ If (Test-Path "HKLM:\SOFTWARE\Citrix\VirtualDesktopAgent") {
         }
     }
     Else {
-        Log -Text "ListOfDCs does not exist in registry" -Error
+        Log -Text "ListOfDDCs does not exist in registry" -Error
         Exit 1
     }
 }
@@ -125,10 +125,10 @@ Else {
     Exit 1
 }
 
-#Valiating if ListOfDCs is not empty.
+#Valiating if ListOfDDCs is not empty.
 If ($Value -eq "") {
 
-    Log -Text "ListOfDCs exist but, is empty" -Warning
+    Log -Text "ListOfDDCs exist but, is empty" -Warning
         
 }
 
@@ -136,7 +136,7 @@ If ($Value -eq "") {
 Try {
     Log -Text "Creating the new registry value by adding the new Delivery Controller to the existing list"
     $Value = $Value.Split(" ")
-    $Value = $Value + $ListOfDCs
+    $Value = $Value + $ListOfDDCs
     $Value = $Value -Join " "
 }
 Catch {
@@ -148,7 +148,7 @@ Catch {
 #Setting the new registry value.
 Log -Text "Setting the new registry value"
 Try {
-    Set-ItemProperty -Path "HKLM:\SOFTWARE\Citrix\VirtualDesktopAgent" -Name "ListOfDCs" -Value $Value
+    Set-ItemProperty -Path "HKLM:\SOFTWARE\Citrix\VirtualDesktopAgent" -Name "ListOfDDCs" -Value $Value
     Log -Text "New value succesfully set in registry"
 }
 Catch {
