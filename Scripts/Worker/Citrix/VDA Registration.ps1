@@ -135,9 +135,7 @@ If ($Value -eq "") {
 #Creating the new value
 Try {
     Log -Text "Creating the new registry value by adding the new Delivery Controller to the existing list"
-    $Value = $Value.Split(" ")
-    $Value = $Value + $ListOfDDCs
-    $Value = $Value -Join " "
+    $Value = ListOfDDCs -Join " "
 }
 Catch {
     Log -Text "An error occured during the creating of the new value" -Error
@@ -153,6 +151,18 @@ Try {
 }
 Catch {
     Log -Text "An error occured during setting the new value" -Error
+    Log -Text "$($PSItem.Exception.Message)" -Error
+    Exit 1
+}
+
+#Restarting Citrix Desktop Service to force registration with Cloud Connector.
+Log -Text "Restarting Citrix Desktop Service to force registration with Cloud Connector"
+Try {
+    Restart-Service BrokerAgent
+    Log -Text "Citrix Desktop Service succesfully restart"
+}
+Catch {
+    Log -Text "An error occured during the restart of Citrix Desktop Service" -Error
     Log -Text "$($PSItem.Exception.Message)" -Error
     Exit 1
 }
