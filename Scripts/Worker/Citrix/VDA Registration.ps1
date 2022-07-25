@@ -135,7 +135,7 @@ If ($Value -eq "") {
 #Creating the new value
 Try {
     Log -Text "Creating the new registry value by adding the new Delivery Controller to the existing list"
-    $Value = ListOfDDCs -Join " "
+    $Value = $ListOfDDCs -Join " "
 }
 Catch {
     Log -Text "An error occured during the creating of the new value" -Error
