@@ -1,19 +1,18 @@
 <#
 **********************************************************************************
-Script to get all sites collection informations.
+Script to create Content Database based on CSV file.
 **********************************************************************************
 
 .SYNOPSIS
-Script to get all sites collection informations. 
+Script to create Content Database based on CSV file. 
 
 Version 1.0 of this script.
 
 .DESCRIPTION
-This script is used to configure to get all required informations to create it on
-another SharePoint farm.  
+This script is used to create Content Database base on CSV file containing a list
+of all sites collection from another SharePoitn server.  
 
-This script will export the informations in a CSV file located in the same directory as
-the script.
+The CSV file needs to be generated with the script "Get Sites Collections.ps1".
 
 This script accepts 2 parameters.
 -debug       This will generate display details informations in the Powershell window.
@@ -23,7 +22,6 @@ WARNING:
 This script needs to be run directly on the SharePoint server.
 
 .EXAMPLE
-./Get Sites Collections.ps1 
 ./Get Sites Collections.ps1 -debug
 ./Get Sites Collections.ps1 -output
 ./Get Sites Collections.ps1 -debug -output
@@ -45,8 +43,8 @@ Param(
 
 ####MANDATORY MANUAL CONFIGURATION
 
-#The URL of the main web application in the SharePoint.
-$WebApplication = "https://ammc-portal.arcelormittal.com/"
+#The path of the CSV file required by the script.
+$CSVFile = "C:\IT\Applications\SitesCollections.csv"
 
 # *******************************************************************************
 
@@ -100,6 +98,28 @@ Function Log {
 
 Log -Text "Script begin"
 
+#Validating CSV file.
+Log -Text "Valigating CSV file"
+If (Test-Path $CSVFile) {
+    Try {
+        $Rows = Import-CSV $CSVFile
+        $Headers = ($Rows | Get-Member -MemberType NoteProperty).Name
+        If (($Headers -notcontains "ContentDatabase") -or ($Headers -notcontains "ContentDatabaseWebApplication")) {
+            Log -Text "CSV is not correctly formatted" -Error
+            Exit 1
+        }
+    }
+    Catch {
+        Log -Text "An error occurred during importing CSV file" -Error
+        Log -Text "$($PSItem.Exception.Message)" -Error
+        Exit 1
+    }
+}
+Else {
+    Log -Text "CSV file does not exist" -Error
+    Exit 1
+}
+
 #Add SharePoint PSSnaping.
 Log -Text "Adding Microsoft.SharePoint.PowerShell PSSnaping"
 Try {
@@ -111,55 +131,25 @@ Catch {
     Exit 1
 }
 
-#Getting a list of all sites templates.
-Log -Text "Getting a list of all sites templates"
-Try {
-    $Templates = [Microsoft.SharePoint.Administration.SPWebService]::ContentService.quotatemplates
-}
-Catch {
-    Log -Text "Unable to get the template's list" -Error
-    Log -Text "$($PSItem.Exception.Message)" -Error
-    Exit 1
-}
+#Loop through each entry of the CSV file to create the Content Database.
+ForEach ($Row in $Rows) {
 
-#Getting a list of all sites collection.
-Log -Text "Getting a list of all sites collection"
-Try {
-    $URLs = SPWebApplication $WebApplication | Get-SPSite -Limit All | Select RootWeb, Url, Owner, SecondaryContact, ContentDatabase
-}
-Catch {
-    Log -Text "Unable to get a list of all sites colllection" -Error
-    Log -Text "$($PSItem.Exception.Message)" -Error
-    Exit 1
-}
+    #Validating if Content Database exist.
+    Log -Text "Validating if Content Database $($Row.ContentDatabase) exist"
+    If ((Get-SPContentDatabase | Select Name -ExpandProperty Name) -notcontains $Row.ContentDatabase) {
+        Log -Text "Content Database $($Row.ContentDatabase) exist does not exist" -Warning
+        Log -Text "Creating Database $($Row.ContentDatabase)"
+        Try {
+            New-SPContentDatabase -name $Row.ContentDatabase -webapplication $Row.ContentDatabaseWebApplication | Out-Null
+            Log -Text "Content Database $($Row.ContentDatabase) create successfully"
+        }
+        Catch {
+            Log -Text "An error occurred  during the creation of the Content Database $($Row.ContentDatabase)" -Warning
+            Log -Text "$($PSItem.Exception.Message)" -Error
+        }
+    }
+    Else {
+        Log -Text "Content Database $($Row.ContentDatabase) already exist"
+    }
 
-$Result = @()
-
-#Loop through each site collection to get all required information to recreat it on another SharePoint server.
-Log -Text "Loop through each site collection to get all required information to recreat it on another SharePoint server"
-ForEach ($Url in $URLs) {
-
-    $Object = "" | Select Name, URL, ContentDatabase, ContentDatabaseWebApplication, Language, Owner, SecondaryOwner, Template, Quota
-
-    $Object.Name = $Url.RootWeb.Title
-    $Object.URL = $Url.URL
-    $Object.ContentDatabase = $Url.ContentDatabase.Name 
-    $Object.ContentDatabaseWebApplication = $Url.ContentDatabase.WebApplication.Url
-    $Object.Language = $Url.RootWeb.Language
-    $Object.Owner = $Url.Owner
-    $Object.SecondaryOwner = $Url.SecondaryContact
-    $Object.Template = "$((Get-SPWeb $Url.URL).WebTemplate)#$((Get-SPWeb $Url.URL).WebTemplateID)"
-    $Object.Quota = $Templates | Where-Object {$_.QuotaID -eq (Get-SPSite $Url.URL).Quota.QuotaID} | Select Name -ExpandProperty Name
-
-    $Result += $Object
-
-}
-
-Log -Text "Exporting the result in a CSV file"
-Try {
-    $Result | Export-CSV "$($ScriptPath)\SitesCollection.csv" -NoTypeInformation -Encoding UTF8
-}
-Catch {
-    Log -Text "Unable to export the result in a CSV file" -Error
-    Log -Text "$($PSItem.Exception.Message)" -Error
 }
