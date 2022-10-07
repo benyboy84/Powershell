@@ -131,33 +131,13 @@ Log -Text "Microsoft Azure PowerShell module is currently installed."
 
 #Connecting to Microsoft Azure.
 Log -Text "Connecting to Azure."
-$Account = Connect-AzAccount
+$Account = Connect-AzAccount -Subscription $Subscription
 If ($Null -eq $Account) {
     Log -Text "Unable to login into Microsoft Azure. Script will exit." -Error
     Exit 1 
 }
 Log -Text "Successfully connected to Microsoft Azure."
     
-#Validating if subscription exist.
-Log -Text "Validating if subscription exist."
-$AzSubscription = Get-AzSubscription | Where-Object {$_.Name -eq $Subscription}
-If ($Null -eq $AzSubscription) {
-    Log -Text "Unable to find the appropriate subscription. Script will exit." -Error
-    Exit 1
-}
-Log -Text "Subscription $($Subscription) exists."
-
-#Selecting the appropriate subscription.
-Log -Text "Selecting the subscription $($Subscription)."
-Try {
-    Select-AzSubscription -Subscription $Subscription | Out-Null
-}
-Catch {
-    Log -Text "Unable to select the appropriate subscription. Script will exit."
-    Exit 1
-}
-Log -Text "Subscription $($Subscription) is currently selected."
-
 #Validating if ressource group already exist.
 Log -Text "Validating if ressource group already exist."
 $AzResourceGroup = Get-AzResourceGroup | Where-Object {$_.ResourceGroupName -eq $RGName}
@@ -176,7 +156,7 @@ If ($Null -eq $AzResourceGroup) {
     Log -Text "Ressourge group $($RGName) was successfully created."
 }
 Else {
-    Log -Text "Ressourge group $($RGName) already exist."
+    Log -Text "Ressourge group $($RGName) already exist." -Warning
 }
 
 #Creating Virtual networks.
