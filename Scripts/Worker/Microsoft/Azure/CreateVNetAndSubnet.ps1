@@ -160,7 +160,7 @@ Log -Text "Subscription $($Subscription) is currently selected."
 
 #Validating if ressource group already exist.
 Log -Text "Validating if ressource group already exist."
-$AzResourceGroup = Get-AzResourceGroup | Where-Object {$_.Name -eq $RGName}
+$AzResourceGroup = Get-AzResourceGroup | Where-Object {$_.ResourceGroupName -eq $RGName}
 
 If ($Null -eq $AzResourceGroup) {
     #Creating the ressource group for network object.
