@@ -7,9 +7,12 @@ Script to create Microsoft Azure virtual networks and subnets
 Script to create Microsoft Azure virtual networks and subnets.
 
 Version 1.0 of this script.
+Version 2.0 of this script.
+    Add validation for VNet and subnet properties.
 
 .DESCRIPTION
-This script is use to create Microsoft Azurevirtual networks and subnets. 
+This script is use to create Microsoft Azure virtual networks and subnets. 
+
 This script use Microsoft AZ PowerShell module.
 
 This script accepts 2 parameters.
@@ -31,7 +34,7 @@ https://github.com/benyboy84/Powershell
 
 Param(
     [Switch]$Debug = $True,
-    [String]$Output = $True
+    [String]$Output = $False
 )
 
 #Default action when an error occured
@@ -45,7 +48,7 @@ $ErrorActionPreference = "Stop"
 $AzureRegion = "canadacentral"
 
 #Microsoft Azure Subscription
-$Subscription = "Abonnement1"
+$Subscription = "Abonnement"
 
 #Ressource group name
 $RGName = "rg-net-cac-001"
@@ -107,13 +110,14 @@ $ScriptName = $ScriptNameAndExtension.Split(".") | Select-Object -First 1
 $TimeStamp = (Get-Date).ToString("yyyy-MM-dd_HH-mm")
 $Log = "$($ScriptPath)\$($ScriptName)_$($TimeStamp).log"
 
+#The Update-AzConfig cmdlet is used to disable the survey message.
 Update-AzConfig -DisplayBreakingChangeWarning $false | Out-Null
 
 Log -Text "Script begin."
 
 #Validating if Azure module is already installed.
 Log -Text "Validating if Azure module is already installed."
-$InstalledModule = Get-InstalledModule -Name Az -AllVersions 
+$InstalledModule = Get-InstalledModule -Name Az -AllVersions -ErrorAction SilentlyContinue
 
 If ($Null -eq $InstalledModule) {
     Try {
@@ -121,32 +125,39 @@ If ($Null -eq $InstalledModule) {
         Log -Text "Microsoft Azure PowerShell module is not install. Installing PowerShell Module."
         Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
         Install-Module -Name Az -Scope CurrentUser -Repository PSGallery -Force
+        Log -Text "Microsoft Azure PowerShell module successfully installed."
     }
     Catch {
         Log -Text "Unable to install Azure PowerShell module. Script will exit." -Error
         Exit 1 
     }
 }
-Log -Text "Microsoft Azure PowerShell module is currently installed."
+Else {
+    Log -Text "Microsoft Azure PowerShell module is already installed."
+}
 
 #Connecting to Microsoft Azure.
 Log -Text "Connecting to Azure."
-$Account = Connect-AzAccount -Subscription $Subscription
-If ($Null -eq $Account) {
+Try {
+    Connect-AzAccount -Subscription $Subscription | Out-Null
+    Log -Text "Successfully connected to Microsoft Azure."
+}
+Catch{
     Log -Text "Unable to login into Microsoft Azure. Script will exit." -Error
+    Log -Text "Error:$($PSItem.Exception.Message)" -Error 
     Exit 1 
 }
-Log -Text "Successfully connected to Microsoft Azure."
     
 #Validating if ressource group already exist.
 Log -Text "Validating if ressource group already exist."
-$AzResourceGroup = Get-AzResourceGroup | Where-Object {$_.ResourceGroupName -eq $RGName}
+$AzResourceGroup = Get-AzResourceGroup -Name $RGName -ErrorAction SilentlyContinue
 
 If ($Null -eq $AzResourceGroup) {
     #Creating the ressource group for network object.
     Log -Text "Creating ressourge group for network object."
     Try {
         $RG = New-AzResourceGroup -Name $RGName -Location $AzureRegion
+        Log -Text "Ressourge group $($RGName) successfully created."
     }
     Catch {
         Log -Text "Unable to create ressource group for network object. Script will exit." -Error
@@ -156,21 +167,27 @@ If ($Null -eq $AzResourceGroup) {
     Log -Text "Ressourge group $($RGName) was successfully created."
 }
 Else {
-    Log -Text "Ressourge group $($RGName) already exist." -Warning
+    If ($AzResourceGroup.Location -ne $AzureRegion) {
+        Log -Text "Ressourge group $($RGName) is not in the Microsoft Azure region $($AzureRegion). Script will exit." -Warning
+        Exit 1
+    }
+    Else {
+        Log -Text "Ressourge group $($RGName) already exist."
+    }
 }
 
 #Creating Virtual networks.
 ForEach ($VNet in $VNets) {
-
-    #Validating if virtual network with the same name or address prefixes already exist.
-    Log -Text "Validating if virtual network with the same name or address prefixe already exist."
-    $AzVirtualNetwork = Get-AzVirtualNetwork | Where-Object {$_.Name -eq $VNet.Name -or $_.AddressSpace.AddressPrefixes -eq $VNet.AddressPrefix}
+    #Validating if virtual network with the same name already exist.
+    Log -Text "Validating if virtual network with the same name already exist."
+    $AzVirtualNetwork = Get-AzVirtualNetwork -Name $VNet.Name -ErrorAction SilentlyContinue
 
     If ($Null -eq $AzVirtualNetwork) {
         #Creating Virtual network.
         Log -Text "Creating VNet $($Vnet.Name)."
         Try {
             New-AzVirtualNetwork -Name $Vnet.Name -ResourceGroupName $RGName -Location $AzureRegion -AddressPrefix $Vnet.AddressPrefix | Out-Null
+            Log -Text "VNet $($Vnet.Name) successfully created."
         }
         Catch {
             Log -Text "An error occurred during the creation of VNet $($Vnet.Name)." -Error
@@ -178,28 +195,38 @@ ForEach ($VNet in $VNets) {
         }
     }
     Else {
-        Log -Text "Virtual network with the same name of address prefixe already exist." -Warning
+        $Config = $True
+        If ($AzVirtualNetwork.AddressSpace.AddressPrefixes -ne $VNet.AddressPrefix) {
+            $Config = $False
+            Log -Text "Virtual network $($Vnet.Name) does not have the address prefixes $($Vnet.AddressPrefix). Script will exit." -Warning
+        }
+        If ($AzVirtualNetwork.Location -ne $AzureRegion) {
+            $Config = $False
+            Log -Text "Virtual network $($Vnet.Name) is not in the Microsoft Azure region $($AzureRegion). Script will exit." -Warning
+        }
+        If ($Config) {
+            Log -Text "Virtual network $($Vnet.Name) already exist."
+        }
+        Else {
+            Exit 1
+        }
     }
 }
 
-
 #Creating subnets
 ForEach ($Subnet in $Subnets) {
-    
     #Getting the virtual network for this subnet.
     Log -Text "Getting the virtual network for subnet $($Subnet.Name)."
     Try {
         $VirtualNetwork = Get-AzVirtualNetwork -Name $Subnet.VirtualNetwork
     }
     Catch {
-        Log -Test "Unable to get the virtual network for subnet $($Subnet.Name)."
+        Log -Test "Unable to get the virtual network for subnet $($Subnet.Name)." -Error
         Continue
     }
-
-    #Validating if subnet with the same name or address prefixes already exist.
-    Log -Text "Validating if subnet with the same name or address prefixes already exist."
-    $AzVirtualNetworkSubnetConfig = Get-AzVirtualNetworkSubnetConfig -VirtualNetwork $VirtualNetwork | Where-Object {$_.Name -eq $Subnet.Name -or $_.AddressPrefix -eq $Subnet.AddressPrefix}
-
+    #Validating if subnet with the same name already exist.
+    Log -Text "Validating if subnet with the same name already exist."
+    $AzVirtualNetworkSubnetConfig = Get-AzVirtualNetworkSubnetConfig -VirtualNetwork $VirtualNetwork -Name $Subnet.Name -ErrorAction SilentlyContinue
     If ($Null -eq $AzVirtualNetworkSubnetConfig) {
         #Creating subnet.
         Log -Text "Creating subnet $($Subnet.Name)."
@@ -213,8 +240,13 @@ ForEach ($Subnet in $Subnets) {
         }
     }
     Else {
-        Log -Text "Subnet with the same name of address prefixe already exist." -Warning
+        If ($AzVirtualNetworkSubnetConfig.AddressPrefix -ne $Subnet.AddressPrefix) {
+            $Config = $False
+            Log -Text "Subnet $($Subnet.Name) does not have the address prefix $($Vnet.AddressPrefix)." -Warning
+        }
+        Else {
+            Log -Text "Subnet $($Subnet.Name) already exist."
+        }
     }
-
 }
 
