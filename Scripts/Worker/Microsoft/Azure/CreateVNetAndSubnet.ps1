@@ -233,6 +233,7 @@ ForEach ($Subnet in $Subnets) {
         Try {
             Add-AzVirtualNetworkSubnetConfig -Name $Subnet.Name -AddressPrefix $Subnet.AddressPrefix -VirtualNetwork $VirtualNetwork | Out-Null
             $VirtualNetwork | Set-AzVirtualNetwork | Out-Null
+            Log -Text "Subnet $($Subnet.Name) successfully created."
         }
         Catch {
             Log -Text "An error occurred during the creation of subnet $($Subnet.Name)." -Error
