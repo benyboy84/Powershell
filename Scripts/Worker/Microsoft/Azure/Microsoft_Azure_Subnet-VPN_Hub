@@ -1,0 +1,298 @@
+<#
+**********************************************************************************
+Script to create Microsoft Azure virtual network and VPN
+**********************************************************************************
+
+.SYNOPSIS
+Script to create Microsoft Azure virtual network and VPN.
+
+Version 1.0 of this script.
+
+.DESCRIPTION
+This script is use to create Microsoft virtual network and VPN. 
+
+This script use Microsoft AZ PowerShell module.
+
+This script accepts 2 parameters.
+-debug       This will generate display details informations in the Powershell window and a log file with the information related to the script execution.
+-output      This will generate an output file instead of displaying information in the Powershell window.
+
+.EXAMPLE
+./Microsoft_Azure_Subnet-VPN_Hub.ps1 
+./Microsoft_Azure_Subnet-VPN_Hub.ps1  -debug
+./Microsoft_Azure_Subnet-VPN_Hub5.ps1  -output
+.NOTES
+
+Author: Benoit Blais
+.LINK
+
+https://
+#>
+
+Param(
+    [Switch]$Debug = $True,
+    [String]$Output = $True
+)
+
+#Default action when an error occured
+$ErrorActionPreference = "Stop"
+
+# *******************************************************************************
+
+####MANDATORY MANUAL CONFIGURATION
+
+#Microsoft Azure Region
+$AzureRegion = "canadacentral"
+
+#Microsoft Azure Subscription
+$Subscription = ""
+
+#Ressource group name
+$RGName = "rg-hub-cac-001"
+
+#Virtual networks
+$Vnets = @(
+    New-Object PSObject -Property @{Name = "net-hub-cac-001"; AddressPrefix = ""}
+)
+
+#Subnets
+#Name must be GatewaySubnet.
+$Subnets = @(
+    New-Object PSObject -Property @{Name = "GatewaySubnet"; AddressPrefix = ""; VirtualNetwork = $Vnets[0].Name}
+)
+
+#Name of the public IP
+$PIPName = "pip-vpng-cac-001"
+
+#BGP ASN number
+$ASN = ""
+
+#VPN Gateway Sku
+$GatewaySku = "VpnGw2AZ"
+
+#Local gateway name
+$LocalGatewayName = "lgw--cac-001"
+
+#Local gateway IP address
+$LocalGatewayIP = ""
+
+#Local address prefix
+$AddressPrefix = ""
+
+#VPN Gateway Name
+$GatewayName = "vpng--cac-001"
+
+#VPN connexion name
+$VPNConnexion = "vnc--cac-001"
+
+#Shared Key
+$SharedKey = ""
+
+# *******************************************************************************
+
+#Log function will allow to display colored information in the PowerShell window if 
+#debug mode is $TRUE. It will create a log file with the information related to the 
+#script execution if output contain a path.
+#Parameters:
+#$Text : Text added to the text file.
+#$Error and $Warning: These switch need to be use to specify something else then an information.
+Function Log {
+    Param (
+        [Parameter(Mandatory=$true)][String]$Text,
+        [Switch]$Error,
+        [Switch]$Warning
+    )
+    If($Error) {
+        $Text = "ERROR   | $Text"
+    }
+    ElseIf($Warning) {
+        $Text = "WARNING | $Text"
+    }
+    Else {
+        $Text = "INFO    | $Text"
+    }
+    If ($Debug) {
+        If($Error) {
+            Write-Host $Text -ForegroundColor Red
+        }ElseIf($Warning) {
+            Write-Host $Text -ForegroundColor Yellow
+        }Else {
+            Write-Host $Text -ForegroundColor Green
+        }
+    }
+    If ($Output) {
+        Try {Add-Content $Log "$(Get-Date) | $Text"} Catch {$Null}
+    }
+}
+
+# **********************************************************************************
+
+#Log file
+$ScriptPath = Split-Path -Parent -Path $MyInvocation.MyCommand.Definition
+$ScriptNameAndExtension = $MyInvocation.MyCommand.Definition.Split("\") | Select-Object -Last 1
+$ScriptName = $ScriptNameAndExtension.Split(".") | Select-Object -First 1
+$TimeStamp = (Get-Date).ToString("yyyy-MM-dd_HH-mm")
+$Log = "$($ScriptPath)\$($ScriptName)_$($TimeStamp).log"
+
+Update-AzConfig -DisplayBreakingChangeWarning $false | Out-Null
+
+Log -Text "Script begin."
+
+#Validating if Azure module is already installed.
+Log -Text "Validating if Azure module is already installed."
+$InstalledModule = Get-InstalledModule -Name Az -AllVersions 
+
+If ($Null -eq $InstalledModule) {
+    Try {
+        #Microsoft Azure PowerShell module is not install. Installing PowerShell Module.
+        Log -Text "Microsoft Azure PowerShell module is not install. Installing PowerShell Module."
+        Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+        Install-Module -Name Az -Scope CurrentUser -Repository PSGallery -Force
+    }
+    Catch {
+        Log -Text "Unable to install Azure PowerShell module. Script will exit." -Error
+        Exit 1 
+    }
+}
+Log -Text "Microsoft Azure PowerShell module is currently installed."
+
+#Connecting to Microsoft Azure.
+Log -Text "Connecting to Azure."
+$Account = Connect-AzAccount -Subscription $Subscription
+If ($Null -eq $Account) {
+    Log -Text "Unable to login into Microsoft Azure. Script will exit." -Error
+    Exit 1 
+}
+Log -Text "Successfully connected to Microsoft Azure."
+
+#**************************************************************************************************
+#Creation of the ressource group
+#**************************************************************************************************    
+    
+#Validating if ressource group already exist.
+Log -Text "Validating if ressource group already exist."
+$AzResourceGroup = Get-AzResourceGroup | Where-Object {$_.ResourceGroupName -eq $RGName}
+
+If ($Null -eq $AzResourceGroup) {
+    #Creating the ressource group for network object.
+    Log -Text "Creating ressourge group for network object."
+    Try {
+        $RG = New-AzResourceGroup -Name $RGName -Location $AzureRegion
+    }
+    Catch {
+        Log -Text "Unable to create ressource group for network object. Script will exit." -Error
+        Log -Text "Error:$($PSItem.Exception.Message)" -Error
+        Exit 1
+    }
+    Log -Text "Ressourge group $($RGName) was successfully created."
+}
+Else {
+    Log -Text "Ressourge group $($RGName) already exist." -Warning
+}
+
+#**************************************************************************************************
+#Creation of the virtual network
+#**************************************************************************************************
+
+#Creating Virtual networks.
+ForEach ($VNet in $VNets) {
+
+    #Validating if virtual network with the same name or address prefixes already exist.
+    Log -Text "Validating if virtual network with the same name or address prefixe already exist."
+    $AzVirtualNetwork = Get-AzVirtualNetwork | Where-Object {$_.Name -eq $VNet.Name -or $_.AddressSpace.AddressPrefixes -eq $VNet.AddressPrefix}
+
+    If ($Null -eq $AzVirtualNetwork) {
+        #Creating Virtual network.
+        Log -Text "Creating VNet $($Vnet.Name)."
+        Try {
+            New-AzVirtualNetwork -Name $Vnet.Name -ResourceGroupName $RGName -Location $AzureRegion -AddressPrefix $Vnet.AddressPrefix | Out-Null
+        }
+        Catch {
+            Log -Text "An error occurred during the creation of VNet $($Vnet.Name)." -Error
+            Log -Text "Error:$($PSItem.Exception.Message)" -Error
+        }
+    }
+    Else {
+        Log -Text "Virtual network with the same name of address prefixe already exist." -Warning
+    }
+}
+
+#**************************************************************************************************
+#Creation of the subnet
+#**************************************************************************************************
+
+#Creating subnets
+ForEach ($Subnet in $Subnets) {
+    
+    #Getting the virtual network for this subnet.
+    Log -Text "Getting the virtual network for subnet $($Subnet.Name)."
+    Try {
+        $VirtualNetwork = Get-AzVirtualNetwork -Name $Subnet.VirtualNetwork
+    }
+    Catch {
+        Log -Text "Unable to get the virtual network for subnet $($Subnet.Name)."
+        Continue
+    }
+
+    #Validating if subnet with the same name or address prefixes already exist.
+    Log -Text "Validating if subnet with the same name or address prefixes already exist."
+    $AzVirtualNetworkSubnetConfig = Get-AzVirtualNetworkSubnetConfig -VirtualNetwork $VirtualNetwork | Where-Object {$_.Name -eq $Subnet.Name -or $_.AddressPrefix -eq $Subnet.AddressPrefix}
+
+    If ($Null -eq $AzVirtualNetworkSubnetConfig) {
+        #Creating subnet.
+        Log -Text "Creating subnet $($Subnet.Name)."
+        Try {
+            $Subnet = Add-AzVirtualNetworkSubnetConfig -Name $Subnet.Name -AddressPrefix $Subnet.AddressPrefix -VirtualNetwork $VirtualNetwork
+            $VirtualNetwork | Set-AzVirtualNetwork | Out-Null
+        }
+        Catch {
+            Log -Text "An error occurred during the creation of subnet $($Subnet.Name)." -Error
+            Log -Text "Error:$($PSItem.Exception.Message)" -Error
+        }
+    }
+    Else {
+        Log -Text "Subnet with the same name of address prefixe already exist." -Warning
+    }
+
+}
+
+
+
+
+#**************************************************************************************************
+#Creation of the public IP address
+#**************************************************************************************************    
+
+#Creating the public IP address
+#Validating if the public IP address already exist.
+Log -Text "Validating if the public IP address already exist."
+$PIP = Get-AzPublicIpAddress | Where-Object {$_.NAme -eq $PIPName}
+If ($Null -eq $PIP) {
+
+    #Creating public IP.
+    Log -Text "Creating $($NVALBName) public IP."
+    Try {
+        $PIP = New-AzPublicIpAddress -Name $PIPName -ResourceGroupName $RGName -Location $AzureRegion -IpAddressVersion IPv4 -Sku Standard -Tier Global -AllocationMethod Static
+    }
+    Catch {
+        Log -Text "An error occurred during the creation of the public IP $($NVALBName)." -Error
+        Log -Text "Error:$($PSItem.Exception.Message)" -Error
+    }
+}
+Else {
+    Log -Text "A public IP with the same name already exist." -Warning
+}
+
+
+$VNet = Get-AzVirtualNetwork -Name $Vnets[0].Name
+$Subnet = Get-AzVirtualNetworkSubnetConfig -Name $Subnets[0].Name -VirtualNetwork $VNet
+
+
+$IPConfig = New-AzVirtualNetworkGatewayIpConfig -Name "GatewayIPConfig" -SubnetId $Subnet.Id -PublicIpAddressId $PIP.Id
+$VPNGateway = New-AzVirtualNetworkGateway -Name $GatewayName -ResourceGroupName $RGName -Location $AzureRegion -IpConfigurations $IPConfig  -GatewayType "Vpn" -VpnType "RouteBased" -GatewaySku $GatewaySku -ASN $ASN -VpnGatewayGeneration Generation2
+
+$LocalGateway = New-AzLocalNetworkGateway -Name $LocalGatewayName -ResourceGroupName $RGName -Location $AzureRegion -GatewayIpAddress $LocalGatewayIP -AddressPrefix $AddressPrefix
+
+$GATEWAY = Get-AzVirtualNetworkGateway -Name $GatewayName -ResourceGroupName $RGName
+$LOCAL = Get-AzLocalNetworkGateway -Name $LocalGatewayName -ResourceGroupName $RGName
+New-AzVirtualNetworkGatewayConnection -Name $VPNConnexion -ResourceGroupName $RGName -Location $AzureRegion -VirtualNetworkGateway1 $GATEWAY -LocalNetworkGateway2 $LOCAL -ConnectionType IPsec -SharedKey $SharedKey
