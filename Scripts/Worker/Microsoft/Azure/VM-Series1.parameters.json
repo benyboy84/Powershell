@@ -1,0 +1,90 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "location": {
+            "value": ""
+        },
+        "zone": {
+            "value": "1"
+        },
+        "vmName": {
+            "value": ""
+        },
+        "imageVersion": {
+            "value": ""
+        },
+        "vmSize": {
+            "value": ""
+        },
+        "authenticationType": {
+            "value": ""
+        },
+        "adminUsername": {
+            "value": ""
+        },
+        "adminPasswordOrKey": {
+            "value": ""
+        },
+
+        "publicIPAddressName": {
+            "value": ""
+        },
+        "publicIPNewOrExisting": {
+            "value": ""
+        },
+        "publicIPAllocationMethod": {
+            "value": ""
+        },
+        "publicIPRGName": {
+            "value": ""
+        },
+        "bootstrap": {
+            "value": ""
+        },
+        "customData": {
+            "value": ""
+        },
+        "vnetNewOrExisting": {
+            "value": ""
+        },
+        "virtualNetworkName": {
+            "value": ""
+        },
+        "virtualNetworkAddressPrefixes": {
+            "value": [
+                ""
+            ]
+        },
+        "virtualNetworkExistingRGName": {
+            "value": ""
+        },
+        "subnet0Name": {
+            "value": ""
+        },
+        "subnet1Name": {
+            "value": ""
+        },
+        "subnet2Name": {
+            "value": ""
+        },
+        "subnet0Prefix": {
+            "value": ""
+        },
+        "subnet1Prefix": {
+            "value": ""
+        },
+        "subnet2Prefix": {
+            "value": ""
+        },
+        "NSGNewOrExisting": {
+            "value": ""
+        },
+        "NSGName": {
+            "value": ""
+        },
+        "srcIPInboundNSG": {
+            "value": ""
+        }
+    }
+}
