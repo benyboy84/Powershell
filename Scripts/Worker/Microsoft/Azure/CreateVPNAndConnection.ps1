@@ -47,27 +47,27 @@ $ErrorActionPreference = "Stop"
 $AzureRegion = "canadacentral"
 
 #Microsoft Azure subscription
-$Subscription = "vault-connectivity"
+$Subscription = ""
 
 #Ressource group name
-$RGName = "rg-hub-cac-001"
+$RGName = ""
 
 #Virtual network
 $Vnets = @(
-    New-Object PSObject -Property @{Name = "net-hub-cac-001"; AddressPrefix = "172.29.192.0/23"}
+    New-Object PSObject -Property @{Name = ""; AddressPrefix = ""}
 )
 
 #Subnet
 #Name must be GatewaySubnet.
 $Subnets = @(
-    New-Object PSObject -Property @{Name = "GatewaySubnet"; AddressPrefix = "172.29.192.0/27"; VirtualNetwork = "net-hub-cac-001"}
+    New-Object PSObject -Property @{Name = "GatewaySubnet"; AddressPrefix = ""; VirtualNetwork = ""}
 )
 
 #Name of the public IP
-$PIPName = "pip-vpng-cac-001"
+$PIPName = ""
 
 #Virtual gateway name
-$VirtualGatewayName = "vpng-braa-cac-001"
+$VirtualGatewayName = ""
 
 #Virtual gateway sku
 #See for Sku (https://learn.microsoft.com/en-us/azure/vpn-gateway/vpn-gateway-about-vpngateways)
@@ -78,27 +78,27 @@ $VirtualGatewayGeneration = "Generation2"
 
 #BGP ASN number for virtual network gateway
 #Leave it empty if BGP is not required.
-$VirtualGatewayASN = "65439"
+$VirtualGatewayASN = ""
 
 #Local gateway name
-$LocalGatewayName = "lgw-braa-cac-001"
+$LocalGatewayName = ""
 
 #Local gateway IP address
-$LocalGatewayIP = "142.216.240.13"
+$LocalGatewayIP = ""
 
 #BGP ASN number for virtual network gateway
 #Leave it empty if BGP is not required.
-$LocalGatewayASN = "65438"
+$LocalGatewayASN = ""
 
 #Local address prefix
 #If you use BGP, it's must be the IP address of the peer.
-$LocalAddressPrefix = "172.29.3.244/32"
+$LocalAddressPrefix = ""
 
 #VPN connexion name
-$VPNConnexionName = "vnc-braa-cac-001"
+$VPNConnexionName = ""
 
 #Shared Key
-$SharedKey = "7zTDZuM+uLchiZZTmNOrr3pEUC+YH40A"
+$SharedKey = ""
 
 # *******************************************************************************
 
