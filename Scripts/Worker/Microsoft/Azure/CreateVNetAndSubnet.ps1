@@ -115,6 +115,10 @@ Update-AzConfig -DisplayBreakingChangeWarning $false | Out-Null
 
 Log -Text "Script begin."
 
+#**************************************************************************************************
+#Az PowerShell module installation
+#************************************************************************************************** 
+
 #Validating if Azure module is already installed.
 Log -Text "Validating if Azure module is already installed."
 $InstalledModule = Get-InstalledModule -Name Az -AllVersions -ErrorAction SilentlyContinue
@@ -136,7 +140,10 @@ Else {
     Log -Text "Microsoft Azure PowerShell module is already installed."
 }
 
-#Connecting to Microsoft Azure.
+#**************************************************************************************************
+#Connecting to Microsoft Azure
+#************************************************************************************************** 
+
 Log -Text "Connecting to Azure."
 Try {
     Connect-AzAccount -Subscription $Subscription | Out-Null
@@ -148,19 +155,23 @@ Catch{
     Exit 1 
 }
     
+#**************************************************************************************************
+#Creation of the ressource group
+#**************************************************************************************************  
+    
 #Validating if ressource group already exist.
-Log -Text "Validating if ressource group already exist."
+Log -Text "Validating if ressource group $($RGName) already exist."
 $AzResourceGroup = Get-AzResourceGroup -Name $RGName -ErrorAction SilentlyContinue
 
 If ($Null -eq $AzResourceGroup) {
-    #Creating the ressource group for network object.
-    Log -Text "Creating ressourge group for network object."
+    #Creating the ressource group.
+    Log -Text "Creating ressourge group $($RGName)."
     Try {
         $RG = New-AzResourceGroup -Name $RGName -Location $AzureRegion
         Log -Text "Ressourge group $($RGName) successfully created."
     }
     Catch {
-        Log -Text "Unable to create ressource group for network object. Script will exit." -Error
+        Log -Text "Unable to create ressource group $($RGName) for network object. Script will exit." -Error
         Log -Text "Error:$($PSItem.Exception.Message)" -Error
         Exit 1
     }
@@ -176,10 +187,13 @@ Else {
     }
 }
 
-#Creating Virtual networks.
+#**************************************************************************************************
+#Creation of the virtual network
+#**************************************************************************************************
+
 ForEach ($VNet in $VNets) {
-    #Validating if virtual network with the same name already exist.
-    Log -Text "Validating if virtual network with the same name already exist."
+    #Validating if virtual network already exist.
+    Log -Text "Validating if virtual network $($VNet.Name) already exist."
     $AzVirtualNetwork = Get-AzVirtualNetwork -Name $VNet.Name -ErrorAction SilentlyContinue
 
     If ($Null -eq $AzVirtualNetwork) {
@@ -190,19 +204,24 @@ ForEach ($VNet in $VNets) {
             Log -Text "VNet $($Vnet.Name) successfully created."
         }
         Catch {
-            Log -Text "An error occurred during the creation of VNet $($Vnet.Name)." -Error
+            Log -Text "An error occurred during the creation of VNet $($Vnet.Name). Script will exit." -Error
             Log -Text "Error:$($PSItem.Exception.Message)" -Error
+            Exit 1
         }
     }
     Else {
         $Config = $True
-        If ($AzVirtualNetwork.AddressSpace.AddressPrefixes -ne $VNet.AddressPrefix) {
+        If ($AzVirtualNetwork.ResourceGroupName -ne $RGName) {
             $Config = $False
-            Log -Text "Virtual network $($Vnet.Name) does not have the address prefixes $($Vnet.AddressPrefix). Script will exit." -Warning
+            Log -Text "Virtual network $($Vnet.Name) is not in the Ressource Group $($RGName). Script will exit." -Warning
         }
         If ($AzVirtualNetwork.Location -ne $AzureRegion) {
             $Config = $False
             Log -Text "Virtual network $($Vnet.Name) is not in the Microsoft Azure region $($AzureRegion). Script will exit." -Warning
+        }
+        If ($AzVirtualNetwork.AddressSpace.AddressPrefixes -ne $VNet.AddressPrefix) {
+            $Config = $False
+            Log -Text "Virtual network $($Vnet.Name) does not have the address prefixes $($Vnet.AddressPrefix). Script will exit." -Warning
         }
         If ($Config) {
             Log -Text "Virtual network $($Vnet.Name) already exist."
@@ -212,6 +231,10 @@ ForEach ($VNet in $VNets) {
         }
     }
 }
+
+#**************************************************************************************************
+#Creation of the subnet
+#**************************************************************************************************
 
 #Creating subnets
 ForEach ($Subnet in $Subnets) {
@@ -225,7 +248,7 @@ ForEach ($Subnet in $Subnets) {
         Continue
     }
     #Validating if subnet with the same name already exist.
-    Log -Text "Validating if subnet with the same name already exist."
+    Log -Text "Validating if subnet $($Subnet.Name) already exist."
     $AzVirtualNetworkSubnetConfig = Get-AzVirtualNetworkSubnetConfig -VirtualNetwork $VirtualNetwork -Name $Subnet.Name -ErrorAction SilentlyContinue
     If ($Null -eq $AzVirtualNetworkSubnetConfig) {
         #Creating subnet.
@@ -236,8 +259,9 @@ ForEach ($Subnet in $Subnets) {
             Log -Text "Subnet $($Subnet.Name) successfully created."
         }
         Catch {
-            Log -Text "An error occurred during the creation of subnet $($Subnet.Name)." -Error
+            Log -Text "An error occurred during the creation of subnet $($Subnet.Name). Script will exit." -Error
             Log -Text "Error:$($PSItem.Exception.Message)" -Error
+            Exit 1
         }
     }
     Else {
