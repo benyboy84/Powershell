@@ -275,3 +275,69 @@ ForEach ($Subnet in $Subnets) {
     }
 }
 
+#**************************************************************************************************
+#Creation of the routing table
+#**************************************************************************************************
+
+#Validating if the routing table already exist.
+Log -Text "Validating if the routing table $($RTName) already exist."
+$RT = Get-AzRouteTable -ResourceGroupName $RGName -Name $RTName -ErrorAction SilentlyContinue
+#Getting the subnet for route table.
+Log -Text "Getting the subnet for the route table."
+Try {
+    $VNet = Get-AzVirtualNetwork -Name $Vnets[0].Name -ResourceGroupName $RGName
+    $Subnet = Get-AzVirtualNetworkSubnetConfig -VirtualNetwork $vnet -Name $Subnets[0].Name
+}
+Catch {
+    Log -Test "Unable to get the subnet for route table. Script will exit." -Error
+    Exit 1
+}
+If ($Null -eq $RT) {
+    #Creating routing table.
+    Log -Text "Creating routing table $($RTName)."
+    Try {
+        $Route = New-AzRouteConfig -Name "Default" -AddressPrefix 0.0.0.0/0 -NextHopType VirtualAppliance -NextHopIpAddress $LBIP
+        $RT = New-AzRouteTable -Name $RTName -ResourceGroupName $RGName -Location $AzureRegion -Route $Route
+
+        Set-AzVirtualNetworkSubnetConfig -VirtualNetwork $VNet -AddressPrefix $Subnet.AddressPrefix -Name $Subnet.Name -RouteTable $RT | Out-Null
+        $VNet | Set-AzVirtualNetwork | Out-Null
+        Log -Text "Routing table $($RTName) successfully created."
+    }
+    Catch {
+        Log -Text "An error occurred during the creation of the routing table $($RTName). Script will exit." -Error
+        Log -Text "Error:$($PSItem.Exception.Message)" -Error
+        #Exit 1
+    }
+
+}
+Else {
+    $Config = $True
+    If ($RT.ResourceGroupName -ne $RGName) {
+        $Config = $False
+        Log -Text "Route table $($RTName) is not in the ressource group $($RGName). Script will exit." -Warning
+    }
+    If ($RT.Location -ne $AzureRegion) {
+        $Config = $False
+        Log -Text "Route table $($RTName) is not in the Microsoft Azure region $($AzureRegion). Script will exit." -Warning
+    }
+    $RouteExist = $False
+    ForEach ($Routes in $RT.Routes) {
+        If ($Routes.AddressPrefix -eq "0.0.0.0/0" -and $Route.NextHopType -eq "VirtualAppliance" -and $Route.NextHopIpAddress -eq $LBIP) {
+            $RouteExist = $True
+        }
+    }
+    If (!($RouteExist)) {
+        $Config = $False
+        Log -Text "Route table $($RTName) does not contain the appropriate route. Script will exit." -Warning
+    }
+    If ($Subnet.RouteTable.Id -notmatch $RT.Name) {
+        $Config = $False
+        Log -Text "Route table $($RTName) is not associate to $($Subnet.Name). Script will exit." -Warning
+    }
+    If ($Config) {
+         Log -Text "Routing table $($RTName) for trust subnet already exist."
+    }
+    Else {
+        Exit 1
+    }
+}
