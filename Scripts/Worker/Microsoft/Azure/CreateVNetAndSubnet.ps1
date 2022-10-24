@@ -64,6 +64,18 @@ $Subnets = @(
     New-Object PSObject -Property @{Name = "web"; AddressPrefix = "10.0.1.0/24"; VirtualNetwork = "vnet-mgmnt-cac-001"}
 )
 
+#Route table
+#Leave it empty if no route table are required
+$RTName = @(
+    New-Object PSObject -Property @{Name = ""; Subnet = ""}
+)
+ 
+#Route
+#NextHopType can be: Internet, None, VirtualAppliance, VirtualApplianceGateway, VnetLocal
+$LBIP = @(
+    New-Object PSObject -Property @{RouteTable = ""; Name = "Default"; AdressPrefux = "0.0.0.0/0"; NextHopType = "VirtualAppliance"; NextHopAddress = ""}
+)
+
 # *******************************************************************************
 
 #Log function will allow to display colored information in the PowerShell window if 
