@@ -500,19 +500,3 @@ ForEach ($Route in $Routes) {
 
 
 
-
-
-#$RouteExist = $False
-#ForEach ($Routes in $RT.Routes) {
-#    If ($Routes.AddressPrefix -eq "0.0.0.0/0" -and $Route.NextHopType -eq "VirtualAppliance" -and $Route.NextHopIpAddress -eq $LBIP) {
-#        $RouteExist = $True
-#    }
-#}
-#If (!($RouteExist)) {
-#    $Config = $False
-#    Log -Text "Route table $($RTName) does not contain the appropriate route. Script will exit." -Warning
-#}
-#If ($Subnet.RouteTable.Id -notmatch $RT.Name) {
-#    $Config = $False
-#    Log -Text "Route table $($RTName) is not associate to $($Subnet.Name). Script will exit." -Warning
-#}
