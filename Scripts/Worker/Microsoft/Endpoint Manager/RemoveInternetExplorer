@@ -1,0 +1,143 @@
+<#
+**********************************************************************************
+Script to remove Internet Explorer
+**********************************************************************************
+
+.SYNOPSIS
+Script to remove Internet Explorer in Windows Feature.
+
+Version 1.0 of this script.
+
+.DESCRIPTION
+This script is use to remove Internet Explorer in Windows Feature. 
+This script accepts 2 parameters.
+
+-debug       This will generate display details informations in the Powershell window and a log file with the information related to the script execution.
+-output      This will generate an output file instead of displaying information in the Powershell window.
+
+.EXAMPLE
+./RemoveInternetExplorer.ps1 
+./RemoveInternetExplorer.ps1  -debug
+./RemoveInternetExplorer.ps1  -output <path>
+
+.NOTES
+Author: Benoit Blais
+
+.LINK
+https://
+
+#>
+
+Param(
+    [Switch]$Debug = $False,
+    [String]$Output = "C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\RemoveInternetExplorer.log"
+)
+
+#Default action when an error occured
+$ErrorActionPreference = "Stop"
+
+# **********************************************************************************
+
+#Log function will allow to display colored information in the PowerShell window if 
+#debug mode is $TRUE. It will create a log file with the information related to the 
+#script execution if output contain a path.
+#Parameters:
+#$Text : Text added to the text file.
+#$Error and $Warning: These switch need to be use to specify something else then an information.
+Function Log {
+    Param (
+        [Parameter(Mandatory=$true)][String]$Text,
+        [Switch]$Error,
+        [Switch]$Warning
+    )
+    If($Error) {
+        $Text = "ERROR   | $Text"
+    }
+    ElseIf($Warning) {
+        $Text = "WARNING | $Text"
+    }
+    Else {
+        $Text = "INFO    | $Text"
+    }
+    If ($Debug) {
+        If($Error) {
+            Write-Host $Text -ForegroundColor Red
+        }ElseIf($Warning) {
+            Write-Host $Text -ForegroundColor Yellow
+        }Else {
+            Write-Host $Text -ForegroundColor Green
+        }
+    }
+    If ($Null -ne $Output) {
+        Try {Add-Content $Output "$(Get-Date) | $Text"} Catch {$Null}
+    }
+}
+
+# **********************************************************************************
+
+#Validate output files.
+If ($Output -match '\\') {
+    #Path contain a "\" like a regular path
+    [Array]$OutputLocationArray = $Output.Split("\")
+    [Array]$OutputLocationArray = $OutputLocationArray[0..($OutputLocationArray.Count-2)]
+    $OutputLocation = $OutputLocationArray -join "\"
+    If (Test-Path -Path $OutputLocation) {
+        If (Test-Path -Path $Output) {
+            #Output files exists, we will try to delete it.
+            Try {
+                Remove-Item -Path $Output -Force
+            } 
+            Catch {
+                #Unable to remove the existing file.
+                #We will execute the script without output file.
+                $Output = $Null
+            }
+        }
+    }
+    Else {
+        #The folder does not exist.
+        #We will execute the script without output file.
+        $Output = $Null
+    }
+}
+Else {
+    #The path does not contain any "\", so it's not a valid path.
+    #We will execute the script without output file.
+    $Output = $Null
+}
+
+Log -Text "Script begin"
+
+#Validate if Internet Explorer feature is enabled.
+Try {
+    Log -Text "Validating if Internet Explorer feature is enabled."
+    $Feature = Get-WindowsOptionalFeature -online | Where-Object {$_.FeatureName -match "Internet-Explorer"}
+}
+Catch {
+    Log -Text "Unable to validate if Internet Explorer feature is enabled." -Error
+    Log -Text "$($PSItem.Exception.Message)" -Error
+    Write-Error -Message "Unable to validate if Internet Explorer feature is enabled."
+    Exit 1
+}
+
+If ($Null -ne $Feature) {
+    
+    Try {
+        Log -Text "Removing Internet Explorer feature"
+        Disable-WindowsOptionalFeature -FeatureName $Feature.FeatureName –Online -NoRestart
+    }
+    Catch {
+        Log -Text "An error occurred during the removal of Internet Explorer feature." -Error
+        Log -Text "$($PSItem.Exception.Message)" -Error
+        Write-Error -Message "An error occurred during the removal of Internet Explorer feature."
+        Exit 1
+    }
+
+}
+Else {
+
+    Log -Text "Internet Explorer feature not enabled."
+    Exit 0
+
+}
+
