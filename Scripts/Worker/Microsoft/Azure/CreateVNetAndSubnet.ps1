@@ -1,17 +1,24 @@
 <#
 **********************************************************************************
-Script to create Microsoft Azure virtual networks and subnets
+Script to create Microsoft Azure virtual network(s) and subnet(s)
 **********************************************************************************
 
 .SYNOPSIS
-Script to create Microsoft Azure virtual networks and subnets.
+Script to create Microsoft Azure virtual network(s) and subnet(s).
 
-Version 1.0 of this script.
-Version 2.0 of this script.
-    Add validation for VNet and subnet properties.
+NOTE:
+This script will not covored Bastion, DDoS or Firewall. 
+    Things that can be configured during a virtual network creation.
+
+VERSION:
+1.0 of this script.
+2.0 of this script.
+    Add validation for virtual network and subnet properties.
+2.1
+    Refactoring of the script.
 
 .DESCRIPTION
-This script is use to create Microsoft Azure virtual networks and subnets. 
+This script is use to create Microsoft Azure virtual network(s) and subnet(s). 
 
 This script use Microsoft AZ PowerShell module.
 
@@ -44,38 +51,17 @@ $ErrorActionPreference = "Stop"
 
 ####MANDATORY MANUAL CONFIGURATION
 
-#Microsoft Azure Region
-$AzureRegion = "canadacentral"
-
-#Microsoft Azure Subscription
-$Subscription = "Abonnement"
-
-#Ressource group name
-$RGName = "RessourceGroup"
-
-#Virtual networks
-$Vnets = @(
-    New-Object PSObject -Property @{Name = "Vnet"; AddressPrefix = "10.0.0.0/16"}
+#Virtual network
+$VirtualNetworks = @(
+    New-Object PSObject -Property @{Subscription = "hub-prod-001"; ResourceGroup = "rg-hub-prod-001"; Name = "vnet-hub-cac-001"; Region = "canadacentral"; AddressPrefix = "10.0.0.0/16"}
 )
 
-#Subnets
-#If no route table is needed, leave it empty
+#Subnet
+#Subnet names are reserved by Microsoft such as: GatewaySubnet, AzureBastionSubnet 
+#Comment object if no subnet is required.
 $Subnets = @(
-    New-Object PSObject -Property @{Name = "Data"; AddressPrefix = "10.0.0.0/24"; VirtualNetwork = "Vnet"; RouteTable = ""}
-    New-Object PSObject -Property @{Name = "web"; AddressPrefix = "10.0.1.0/24"; VirtualNetwork = "Vnet"; RouteTable = "RouteTable"}
-)
-
-#Route table
-#Leave it empty if no route table are required
-$RouteTables = @(
-    New-Object PSObject -Property @{Name = "RouteTable"}
-)
- 
-#Route
-#NextHopType can be: Internet, None, VirtualAppliance, VirtualApplianceGateway, VnetLocal
-$Routes = @(
-    New-Object PSObject -Property @{RouteTable = "RouteTable"; Name = "Internet"; AdressPrefix = "0.0.0.0/0"; NextHopType = "Internet"; NextHopAddress = ""}
-    New-Object PSObject -Property @{RouteTable = "RouteTable"; Name = "Web"; AdressPrefix = "10.0.1.0/24"; NextHopType = "VirtualAppliance"; NextHopAddress = "10.0.0.4"}
+    New-Object PSObject -Property @{VirtualNetwork = "vnet-hub-cac-001"; Name = "GatewaySubnet"; AddressPrefix = "10.0.0.0/27";}
+    New-Object PSObject -Property @{VirtualNetwork = "vnet-hub-cac-001"; Name = "snet-dns-cac-001"; AddressPrefix = "10.0.0.32/28";}
 )
 
 # *******************************************************************************
@@ -117,38 +103,50 @@ Function Log {
 
 # **********************************************************************************
 
-#Log file
-$ScriptPath = Split-Path -Parent -Path $MyInvocation.MyCommand.Definition
-$ScriptNameAndExtension = $MyInvocation.MyCommand.Definition.Split("\") | Select-Object -Last 1
-$ScriptName = $ScriptNameAndExtension.Split(".") | Select-Object -First 1
-$TimeStamp = (Get-Date).ToString("yyyy-MM-dd_HH-mm")
-$Log = "$($ScriptPath)\$($ScriptName)_$($TimeStamp).log"
+#Creating the log file if $Output parameter is set to TRUE.
+If ($Output) {
+    #Getting the location of the script.
+    $ScriptPath = Split-Path -Parent -Path $MyInvocation.MyCommand.Definition
+    #Getting the file name and extension by splitting the path with "\" character.
+    $ScriptNameAndExtension = $MyInvocation.MyCommand.Definition.Split("\") | Select-Object -Last 1
+    #Getting the file name by splitting the with "." character.
+    $ScriptName = $ScriptNameAndExtension.Split(".") | Select-Object -First 1
+    #Getting the date and time of the script execution.
+    $TimeStamp = (Get-Date).ToString("yyyy-MM-dd_HH-mm")
+    #Combining the location of the script, the name of the script and the timestamp to create he log file.
+    $Log = "$($ScriptPath)\$($ScriptName)_$($TimeStamp).log"
+}
+
+# **********************************************************************************
+
+Log -Text "Script begin."
+
+# **********************************************************************************
 
 #The Update-AzConfig cmdlet is used to disable the survey message.
 Update-AzConfig -DisplayBreakingChangeWarning $false | Out-Null
-
-Log -Text "Script begin."
 
 #**************************************************************************************************
 #Az PowerShell module installation
 #************************************************************************************************** 
 
-#Validating if Azure module is already installed.
 Log -Text "Validating if Azure module is already installed."
 $InstalledModule = Get-InstalledModule -Name Az -AllVersions -ErrorAction SilentlyContinue
-
+#If the value of the $InstalledModule variable equals $Null, this indicates that the module is not installed. 
 If ($Null -eq $InstalledModule) {
+    Log -Text "Microsoft Azure PowerShell module is not install." 
+    Log -Text "Installing PowerShell Module..."
     Try {
-        #Microsoft Azure PowerShell module is not install. Installing PowerShell Module.
-        Log -Text "Microsoft Azure PowerShell module is not install. Installing PowerShell Module."
         Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
         Install-Module -Name Az -Scope CurrentUser -Repository PSGallery -Force
-        Log -Text "Microsoft Azure PowerShell module successfully installed."
     }
     Catch {
-        Log -Text "Unable to install Azure PowerShell module. Script will exit." -Error
+        Log -Text "Unable to install Azure PowerShell module." -Error
+        Log -Text "Error:$($PSItem.Exception.Message)" -Error 
+        Log -Text "Script will exit." -Error
         Exit 1 
     }
+    Log -Text "Microsoft Azure PowerShell module successfully installed."
 }
 Else {
     Log -Text "Microsoft Azure PowerShell module is already installed."
@@ -158,345 +156,124 @@ Else {
 #Connecting to Microsoft Azure
 #************************************************************************************************** 
 
-Log -Text "Connecting to Azure."
+Log -Text "Connecting to Microsoft Azure..."
 Try {
-    Connect-AzAccount -Subscription $Subscription | Out-Null
-    Log -Text "Successfully connected to Microsoft Azure."
+    Connect-AzAccount | Out-Null
 }
 Catch{
-    Log -Text "Unable to login into Microsoft Azure. Script will exit." -Error
+    Log -Text "Unable to login into Microsoft Azure." -Error
     Log -Text "Error:$($PSItem.Exception.Message)" -Error 
+    Log -Text "Script will exit." -Error
     Exit 1 
 }
+Log -Text "Successfully connected to Microsoft Azure."
     
 #**************************************************************************************************
-#Creation of the ressource group
-#**************************************************************************************************  
-    
-#Validating if ressource group already exist.
-Log -Text "Validating if ressource group $($RGName) already exist."
-$AzResourceGroup = Get-AzResourceGroup -Name $RGName -ErrorAction SilentlyContinue
+#Creation of the virtual network(s)
+#**************************************************************************************************
 
-If ($Null -eq $AzResourceGroup) {
-    #Creating the ressource group.
-    Log -Text "Creating ressourge group $($RGName)."
+ForEach ($VirtualNetwork in $VirtualNetworks) {
+    Log -Text "Validating if subscription $($VirtualNetwork.Subscription) exist."
     Try {
-        $RG = New-AzResourceGroup -Name $RGName -Location $AzureRegion
-        Log -Text "Ressourge group $($RGName) successfully created."
+        $AzSubscription = Get-AzSubscription -SubscriptionName $VirtualNetwork.Subscription
     }
     Catch {
-        Log -Text "Unable to create ressource group $($RGName). Script will exit." -Error
-        Log -Text "Error:$($PSItem.Exception.Message)" -Error
-        Exit 1
+        Log -Text "Subscription $($VirtualNetwork.Subscription) does not exist." -Error
+        Log -Text "It will not be possible to validate or create the virtual network $($VirtualNetwork.Name)." -Error
+        Continue
     }
-    Log -Text "Ressourge group $($RGName) was successfully created."
-}
-Else {
-    If ($AzResourceGroup.Location -ne $AzureRegion) {
-        Log -Text "Ressourge group $($RGName) is not in the Microsoft Azure region $($AzureRegion)." -Warning
+    Log -Text "Setting the subscription $($VirtualNetwork.Subscription)..."
+    Try {
+        Set-AzContext -Subscription $AzSubscription | Out-Null
     }
-    Else {
-        Log -Text "Ressourge group $($RGName) already exist."
+    Catch {
+        Log -Text "Unable to set the subscription $($VirtualNetwork.Subscription)." -Error
+        Log -Text "Error:$($PSItem.Exception.Message)" -Error 
+        Log -Text "It will not be possible to validate or create the virtual network $($VirtualNetwork.Name)." -Error
+        Continue 
     }
-}
-
-#**************************************************************************************************
-#Creation of the virtual network
-#**************************************************************************************************
-
-ForEach ($VNet in $VNets) {
-    #Validating if virtual network already exist.
-    Log -Text "Validating if virtual network $($VNet.Name) already exist."
-    $AzVirtualNetwork = Get-AzVirtualNetwork -Name $VNet.Name -ErrorAction SilentlyContinue
-
+    Log -Text "Subscription $($VirtualNetwork.Subscription) is now selected."
+    Log -Text "Validating if virtual network $($VirtualNetwork.Name) already exist."
+    $AzVirtualNetwork = Get-AzVirtualNetwork -Name $VirtualNetwork.Name -ErrorAction SilentlyContinue
+    #If the value of the $AzVirtualNetwork variable equals $Null, this indicates that the virtual network does not exist.
     If ($Null -eq $AzVirtualNetwork) {
-        #Creating Virtual network.
-        Log -Text "Creating VNet $($Vnet.Name)."
-        Try {
-            New-AzVirtualNetwork -Name $Vnet.Name -ResourceGroupName $RGName -Location $AzureRegion -AddressPrefix $Vnet.AddressPrefix | Out-Null
-            Log -Text "VNet $($Vnet.Name) successfully created."
-        }
-        Catch {
-            Log -Text "An error occurred during the creation of VNet $($Vnet.Name). Script will exit." -Error
-            Log -Text "Error:$($PSItem.Exception.Message)" -Error
-            Exit 1
-        }
-    }
-    Else {
-        $Config = $True
-        If ($AzVirtualNetwork.ResourceGroupName -ne $RGName) {
-            $Config = $False
-            Log -Text "Virtual network $($Vnet.Name) is not in the ressource group $($RGName)." -Warning
-        }
-        If ($AzVirtualNetwork.Location -ne $AzureRegion) {
-            $Config = $False
-            Log -Text "Virtual network $($Vnet.Name) is not in the Microsoft Azure region $($AzureRegion)." -Warning
-        }
-        If ($AzVirtualNetwork.AddressSpace.AddressPrefixes -ne $VNet.AddressPrefix) {
-            $Config = $False
-            Log -Text "Virtual network $($Vnet.Name) does not have the address prefix $($Vnet.AddressPrefix)." -Warning
-        }
-        If ($Config) {
-            Log -Text "Virtual network $($Vnet.Name) already exist."
-        }
-    }
-}
-
-#**************************************************************************************************
-#Creation of the subnet
-#**************************************************************************************************
-
-#Creating subnet.
-ForEach ($Subnet in $Subnets) {
-    #Getting the virtual network for this subnet.
-    Log -Text "Getting the virtual network for subnet $($Subnet.Name)."
-    Try {
-        $VirtualNetwork = Get-AzVirtualNetwork -Name $Subnet.VirtualNetwork
-    }
-    Catch {
-        Log -Test "Unable to get the virtual network for subnet $($Subnet.Name)." -Error
-        Continue
-    }
-    #Validating if subnet already exist.
-    Log -Text "Validating if subnet $($Subnet.Name) already exist."
-    $AzVirtualNetworkSubnetConfig = Get-AzVirtualNetworkSubnetConfig -VirtualNetwork $VirtualNetwork -Name $Subnet.Name -ErrorAction SilentlyContinue
-    If ($Null -eq $AzVirtualNetworkSubnetConfig) {
-        #Creating subnet.
-        Log -Text "Creating subnet $($Subnet.Name)."
-        Try {
-            Add-AzVirtualNetworkSubnetConfig -Name $Subnet.Name -AddressPrefix $Subnet.AddressPrefix -VirtualNetwork $VirtualNetwork | Out-Null
-            $VirtualNetwork | Set-AzVirtualNetwork | Out-Null
-            Log -Text "Subnet $($Subnet.Name) successfully created."
-        }
-        Catch {
-            Log -Text "An error occurred during the creation of subnet $($Subnet.Name). Script will exit." -Error
-            Log -Text "Error:$($PSItem.Exception.Message)" -Error
-            Exit 1
-        }
-    }
-    Else {
-        If ($AzVirtualNetworkSubnetConfig.AddressPrefix -ne $Subnet.AddressPrefix) {
-            $Config = $False
-            Log -Text "Subnet $($Subnet.Name) does not have the address prefix $($Vnet.AddressPrefix)." -Warning
-        }
-        Else {
-            Log -Text "Subnet $($Subnet.Name) already exist."
-        }
-    }
-}
-
-#**************************************************************************************************
-#Creation of the route table
-#**************************************************************************************************
-
-ForEach ($RouteTable in $RouteTables) {
-    #Validating if the route table already exist.
-    Log -Text "Validating if the route table $($RTName) already exist."
-    $RT = Get-AzRouteTable -Name $RouteTable.Name -ResourceGroupName $RGName -ErrorAction SilentlyContinue
-    If ($Null -eq $RT) {
-        #Creating route table.
-        Log -Text "Creating route table $($RouteTable.Name)."
-        Try {
-            $RT = New-AzRouteTable -Name $RouteTable.Name -ResourceGroupName $RGName -Location $AzureRegion
-            Log -Text "Routing table $($RouteTable.Name) successfully created."
-        }
-        Catch {
-            Log -Text "An error occurred during the creation of the route table $($RouteTable.Name). Script will exit." -Error
-            Log -Text "Error:$($PSItem.Exception.Message)" -Error
-            Exit 1
-        }
-    }
-    Else {
-        $Config = $True
-        If ($RT.ResourceGroupName -ne $RGName) {
-            $Config = $False
-            Log -Text "Route table $($RouteTable.Name) is not in the ressource group $($RGName)." -Warning
-        }
-        If ($RT.Location -ne $AzureRegion) {
-            $Config = $False
-            Log -Text "Route table $($RouteTable.Name) is not in the Microsoft Azure region $($AzureRegion)." -Warning
-        }
-        If ($Config) {
-            Log -Text "Routing table $($RTName) for trust subnet already exist."
-        }
-    }
-}
-
-#**************************************************************************************************
-#Assignment of route table to subnet
-#**************************************************************************************************
-
-$AssignedTo = $Subnets | Where-Object {$_.RouteTable -ne ""}
-ForEach($Assignment in $AssignedTo) {
-    #Getting the subnet for route table.
-    Log -Text "Getting required information to assign route table $($Assignment.RouteTable) to $($Assignment.Name)."
-    Try {
-        $VNet = Get-AzVirtualNetwork -Name $Assignment.VirtualNetwork -ResourceGroupName $RGName
-        $Subnet = Get-AzVirtualNetworkSubnetConfig -VirtualNetwork $VNet -Name $Assignment.Name
-        $RT = Get-AzRouteTable -Name $Assignment.RouteTable -ResourceGroupName $RGName 
-    }
-    Catch {
-        Log -Text "Unable to get the subnet for route table." -Error
-        Continue
-    }
-    If ($Null -eq $Subnet.RouteTable) {
-        Try{
-            #Assignment of the route table to the subnet.
-            Log -Text "Assignment of the route table $($Assignment.RouteTable) to the subnet $($Assignment.Name)."
-            Set-AzVirtualNetworkSubnetConfig -VirtualNetwork $VNet -AddressPrefix $Assignment.AddressPrefix -Name $Assignment.Name -RouteTable $RT | Out-Null
-            $VNet | Set-AzVirtualNetwork | Out-Null
-            Log -Text "Route table $($Assignment.RouteTable) successfully assigne to $($Assignment.Name) subnet."
-        }
-        Catch {
-            Log -Text "An error occurred during the assignment of the route table $($Assignment.RouteTable) to subnet $($Assignment.Name). Script will exit." -Error
-            Log -Text "Error:$($PSItem.Exception.Message)" -Error
-            Exit 1
-        }
-    }
-    Else {
-        If ($Subnet.RouteTable.Id -notmatch $Assignment.RouteTable) {
-            Log -Text "Subnet $($Assignment.Name) does not have the route table $($Assignment.RouteTable) assigned to it." -Warning
-        }
-        Else {
-            Log -Text "Route table is assigned to subnet $($Assignment.Name)."
-        }
-    }
-}
-
-#**************************************************************************************************
-#Route creation
-#**************************************************************************************************
-
-ForEach ($Route in $Routes) {
-    #Getting route table for route.
-    Log -Text "Getting route table $($Route.RouteTable) for route $($Route.Name)."
-    Try {
-        $RT = Get-AzRouteTable -Name $Route.RouteTable -ResourceGroupName $RGName 
-    }
-    Catch {
-        Log -Text "Unable to get the route table $($Route.RouteTable) for route $($Route.Name)." -Error
-        Continue
-    }
-    #Validating if route already exist in route table.
-    Log -Text "Validating if route already exist in route table $($RT.Name)."
-    $RouteConfig = Get-AzRouteConfig -RouteTable $RT -ErrorAction SilentlyContinue
-    If ($Null -eq $RouteConfig) {
-        #Creating route.
-        Log -Text "No route exist in route table $($RT.Name)."
-        Log -Text "Creating route."
-        If ($Route.NextHopType -eq "VirtualAppliance") {
-            If ($Route.NextHopAddress -ne "") {
-                Try {
-                    $RT | Add-AzRouteConfig -Name $Route.Name -AddressPrefix $Route.AdressPrefix -NextHopType $Route.NextHopType -NextHopIpAddress $Route.NextHopAddress | Set-AzRouteTable | Out-Null
-                    Log -Text "Route $($Route.Name) successfully created."
-                }
-                Catch {
-                    Log -Text "An error occurred during the creation of route table $($Route.Name). Script will exit." -Error
-                    Log -Text "Error:$($PSItem.Exception.Message)" -Error
-                    Exit 1 
-                }
-            }
-            Else {
-                Log -Text "Next hop Ip address can't be empty when next hop type is virrtuel appliance." -Error
-            }
-        }
-        Else {
+        Log -Text "Validating if resource group $($VirtualNetwork.ResourceGroup) already exist."
+        $AzResourceGroup = Get-AzResourceGroup -Name $VirtualNetwork.ResourceGroup -ErrorAction SilentlyContinue
+        #If the value of the $AzResourceGroup variable equals $Null, this indicates that the resource group does not exist.
+        #It is not possible to create a virtual network without a valid resource group.
+        If ($Null -ne $AzResourceGroup) {
+            Log -Text "Creating the virtual network $($VirtualNetwork.Name)..."
             Try {
-                $RT | Add-AzRouteConfig -Name $Route.Name -AddressPrefix $Route.AdressPrefix -NextHopType $Route.NextHopType | Set-AzRouteTable | Out-Null
-                Log -Text "Route $($Route.Name) successfully created."
+                New-AzVirtualNetwork -ResourceGroupName $VirtualNetwork.ResourceGroup -Location $VirtualNetwork.Region -Name $VirtualNetwork.Name  -AddressPrefix $VirtualNetwork.AddressPrefix | Out-Null
             }
             Catch {
-                Log -Text "An error occurred during the creation of route table $($Route.Name). Script will exit." -Error
+                Log -Text "An error occurred during the creation of the virtual network $($VirtualNetwork.Name)." -Error
                 Log -Text "Error:$($PSItem.Exception.Message)" -Error
-                Exit 1 
+                Continue
             }
+            Log -Text "Virtual network $($VirtualNetwork.Name) successfully created."
+        }
+        Else {
+            Log -Text "Resource group $($VirtualNetwork.ResourceGroup) does not exist." -Error
+            Log -Text "It is not be possible to create the virtual network $($VirtualNetwork.Name) without a valid resource group." -Error
         }
     }
     Else {
-        $RouteConfig = Get-AzRouteConfig -RouteTable $RT -Name $Route.Name -ErrorAction SilentlyContinue
-        If ($Null -eq $RouteConfig) {
-            #Route with same name does not exist.
-            $RouteConfig = Get-AzRouteConfig -RouteTable $RT | Where-Object {$_.AddressPrefix -eq $Route.AdressPrefix}
-            If($Null -eq $RouteConfig) {
-                #No route with same prefix exist
-                $RouteConfig = $RouteConfig | Where-Object {$_.NextHopType -eq $Route.NextHopType}
-                If ($Null -eq $RouteConfig) {
-                    #No route with same next hop exist
-                    #Creating route
-                    Log -Text "Creating route."
-                        If ($Route.NextHopType -eq "VirtualAppliance") {
-                            If ($Route.NextHopAddress -ne "") {
-                                Try {
-                                    $RT | Add-AzRouteConfig -Name $Route.Name -AddressPrefix $Route.AdressPrefix -NextHopType $Route.NextHopType -NextHopIpAddress $Route.NextHopAddress | Set-AzRouteTable | Out-Null
-                                    Log -Text "Route $($Route.Name) successfully created."
-                                }
-                                Catch {
-                                    Log -Text "An error occurred during the creation of route table $($Route.Name). Script will exit." -Error
-                                    Log -Text "Error:$($PSItem.Exception.Message)" -Error
-                                    Exit 1 
-                                }
-                            }
-                            Else {
-                                Log -Text "Next hop Ip address can't be empty when next hop type is virrtuel appliance." -Error
-                            }
-                        }
-                        Else {
-                            Try {
-                                $RT | Add-AzRouteConfig -Name $Route.Name -AddressPrefix $Route.AdressPrefix -NextHopType $Route.NextHopType | Set-AzRouteTable | Out-Null
-                                Log -Text "Route $($Route.Name) successfully created."
-                            }
-                            Catch {
-                                Log -Text "An error occurred during the creation of route table $($Route.Name). Script will exit." -Error
-                                Log -Text "Error:$($PSItem.Exception.Message)" -Error
-                                Exit 1 
-                            }
-                        }
-                }
-             }
-            Else {
-                #Route with same address prefix already exist.
-                #Validating if route with same prefix have only the wrong name.
-                If ($RouteConfig.Name -ne $Route.Name) {
-                    Log -Text "Name for route with address prefix $($Route.AdressPrefix) is not $($Route.Name)." -Warning
-                }
-                If ($RouteConfig.NextHopType -ne $Route.NextHopType) {
-                    Log -Text "Next hop type for route with address prefix $($Route.AdressPrefix) is not $($Route.NextHopType)." -Warning
-                    $Config = $False
-                }
-                If ($RouteConfig.NextHopType -eq "VirtualAppliance") {
-                    If ($RouteConfig.NextHopAddress -ne $Route.NextHopAddress) {
-                        Log -Text "Next hop ip address for route with address prefix $($Route.AdressPrefix) is not $($Route.NextHopAddress)." -Warning
-                        $Config = $False
-                    }
-                }
-            }
+        Log -Text "Virtual network $($VirtualNetwork.Name) already exist."
+        $Config = $True
+        If ($AzVirtualNetwork.ResourceGroupName -ne $VirtualNetwork.ResourceGroup) {
+            $Config = $False
+            Log -Text "Virtual network $($VirtualNetwork.Name) is not in the ressource group $($VirtualNetwork.ResourceGroup)." -Warning
         }
-        Else {
-            #Route with the same name exist.
-            #Validating if adress prefix is correctly configured.
-            $Config = $True
-            If ($RouteConfig.AddressPrefix -ne $Route.AdressPrefix) {
-                Log -Text "Address prefix for route $($Route.Name) is not $($Route.AdressPrefix)." -Warning
-                $Config = $False
-            }
-            If ($RouteConfig.NextHopType -ne $Route.NextHopType) {
-                Log -Text "Next hop type for route $($Route.Name) is not $($Route.NextHopType)." -Warning
-                $Config = $False
-            }
-            If ($RouteConfig.NextHopType -eq "VirtualAppliance") {
-                If ($RouteConfig.NextHopAddress -ne $Route.NextHopAddress) {
-                    Log -Text "Next hop ip address for route $($Route.Name) is not $($Route.NextHopAddress)." -Warning
-                    $Config = $False
-                }
-            }
-            If ($Config) {
-                Log -Text "Route with name $($Route.Name) already exist"
-            }
+        If ($AzVirtualNetwork.Location -ne $VirtualNetwork.Region) {
+            $Config = $False
+            Log -Text "Virtual network $($VirtualNetwork.Name) is not in the Microsoft Azure region $($VirtualNetwork.Region)." -Warning
+        }
+        If ($AzVirtualNetwork.AddressSpace.AddressPrefixes -ne $VirtualNetwork.AddressPrefix) {
+            $Config = $False
+            Log -Text "Virtual network $($VirtualNetwork.Name) does not have the address prefix $($VirtualNetwork.AddressPrefix)." -Warning
+        }
+        If ($Config) {
+            Log -Text "Virtual network $($VirtualNetwork.Name) is properly configured."
         }
     }
 }
 
+#**************************************************************************************************
+#Creation of the subnet(s)
+#**************************************************************************************************
 
-
-
-
+ForEach ($Subnet in $Subnets) {
+    Log -Text "Getting the virtual network for subnet $($Subnet.Name)."
+    $AzVirtualNetwork = Get-AzVirtualNetwork -Name $Subnet.VirtualNetwork
+    #If the value of the $AzVirtualNetwork variable equals $Null, this indicates that the virtual network does not exist.
+    If ($Null -eq $AzVirtualNetwork) {
+        Log -Text "Unable to get the virtual network $($Subnet.VirtualNetwork) for subnet $($Subnet.Name)." -Error
+        Log -Text "It will not be possible to validate or create the subnet $($Subnet.Name)." -Error
+        Continue
+    }
+    Log -Text "Validating if subnet $($Subnet.Name) already exist."
+    $AzVirtualNetworkSubnetConfig = Get-AzVirtualNetworkSubnetConfig -VirtualNetwork $AzVirtualNetwork -Name $Subnet.Name -ErrorAction SilentlyContinue
+    If ($Null -eq $AzVirtualNetworkSubnetConfig) {
+        Log -Text "Creating subnet $($Subnet.Name)..."
+        Try {
+            Add-AzVirtualNetworkSubnetConfig -Name $Subnet.Name -AddressPrefix $Subnet.AddressPrefix -VirtualNetwork $AzVirtualNetwork | Out-Null
+            $AzVirtualNetwork | Set-AzVirtualNetwork | Out-Null
+        }
+        Catch {
+            Log -Text "An error occurred during the creation of subnet $($Subnet.Name)." -Error
+            Log -Text "Error:$($PSItem.Exception.Message)" -Error
+            Continue
+        }
+        Log -Text "Subnet $($Subnet.Name) successfully created."
+    }
+    Else {
+        Log -Text "Subnet $($Subnet.Name) already exist."
+        If ($AzVirtualNetworkSubnetConfig.AddressPrefix -ne $Subnet.AddressPrefix) {
+            Log -Text "Subnet $($Subnet.Name) does not have the address prefix $($Subnet.AddressPrefix)." -Warning
+        }
+        Else {
+            Log -Text "Subnet $($Subnet.Name) is properly configured."
+        }
+    }
+}
