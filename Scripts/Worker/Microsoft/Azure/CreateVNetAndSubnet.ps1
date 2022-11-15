@@ -57,7 +57,8 @@ $VirtualNetworks = @(
 )
 
 #Subnet
-#Subnet names are reserved by Microsoft such as: GatewaySubnet, AzureBastionSubnet 
+#Subnet names are reserved by Microsoft such as: GatewaySubnet, AzureBastionSubnet
+#Virtual network must be declared above.
 #Comment object if no subnet is required.
 $Subnets = @(
     New-Object PSObject -Property @{VirtualNetwork = "vnet-hub-cac-001"; Name = "GatewaySubnet"; AddressPrefix = "10.0.0.0/27";}
@@ -172,6 +173,7 @@ Log -Text "Successfully connected to Microsoft Azure."
 #Creation of the virtual network(s)
 #**************************************************************************************************
 
+Log -Text "Creating virtual network(s)..."
 ForEach ($VirtualNetwork in $VirtualNetworks) {
     Log -Text "Validating if subscription $($VirtualNetwork.Subscription) exist."
     Try {
@@ -243,7 +245,38 @@ ForEach ($VirtualNetwork in $VirtualNetworks) {
 #Creation of the subnet(s)
 #**************************************************************************************************
 
+Log -Text "Creating subnet(s)..."
 ForEach ($Subnet in $Subnets) {
+    Log -Text "Getting the subscription for the virtual network $($Subnet.VirtualNetwork)."
+    $Subscription = $VirtualNetworks | Where-Object {$_.Name -eq $Subnet.VirtualNetwork} | Select -Property Subscription -ExpandProperty Subscription
+    #If the value of the $Subscription variable equals $Null, this indicates that the virtual network is not declared in the mandatory manual configuration section.
+    If ($Null -eq $Subscription) {
+        Log -Text "Unable to get the subscription name for the virtual network $($Subnet.VirtualNetwork)."
+        Log -Text "It will not be possible to validate or create the subnet $($Subnet.Name)." -Error
+        Continue
+    }
+    Else {
+        Log -Text "Validating if subscription $($VirtualNetwork.Subscription) exist."
+        Try {
+            $AzSubscription = Get-AzSubscription -SubscriptionName $VirtualNetwork.Subscription
+        }
+        Catch {
+            Log -Text "Subscription $($VirtualNetwork.Subscription) does not exist." -Error
+            Log -Text "It will not be possible to validate or create the virtual network $($VirtualNetwork.Name)." -Error
+            Continue
+        }
+        Log -Text "Setting the subscription $($VirtualNetwork.Subscription)..."
+        Try {
+            Set-AzContext -Subscription $AzSubscription | Out-Null
+        }
+        Catch {
+            Log -Text "Unable to set the subscription $($VirtualNetwork.Subscription)." -Error
+            Log -Text "Error:$($PSItem.Exception.Message)" -Error 
+            Log -Text "It will not be possible to validate or create the virtual network $($VirtualNetwork.Name)." -Error
+            Continue 
+        }
+        Log -Text "Subscription $($VirtualNetwork.Subscription) is now selected."
+    }    
     Log -Text "Getting the virtual network for subnet $($Subnet.Name)."
     $AzVirtualNetwork = Get-AzVirtualNetwork -Name $Subnet.VirtualNetwork
     #If the value of the $AzVirtualNetwork variable equals $Null, this indicates that the virtual network does not exist.
