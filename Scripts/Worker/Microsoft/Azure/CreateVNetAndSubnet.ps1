@@ -11,8 +11,9 @@ This script will not covored Bastion, DDoS or Firewall.
     Things that can be configured during a virtual network creation.
 
 VERSION:
-1.0 of this script.
-2.0 of this script.
+1.0
+    First version.
+2.0
     Add validation for virtual network and subnet properties.
 2.1
     Refactoring of the script.
