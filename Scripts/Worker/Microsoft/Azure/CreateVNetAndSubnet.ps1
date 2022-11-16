@@ -132,7 +132,7 @@ Update-AzConfig -DisplayBreakingChangeWarning $false | Out-Null
 #Az PowerShell module installation
 #************************************************************************************************** 
 
-Log -Text "Validating if Azure module is already installed."
+Log -Text "Validating if Azure module is installed."
 $InstalledModule = Get-InstalledModule -Name Az -AllVersions -ErrorAction SilentlyContinue
 #If the value of the $InstalledModule variable equals $Null, this indicates that the module is not installed. 
 If ($Null -eq $InstalledModule) {
@@ -151,7 +151,7 @@ If ($Null -eq $InstalledModule) {
     Log -Text "Microsoft Azure PowerShell module successfully installed."
 }
 Else {
-    Log -Text "Microsoft Azure PowerShell module is already installed."
+    Log -Text "Microsoft Azure PowerShell module is installed."
 }
 
 #**************************************************************************************************
@@ -196,11 +196,11 @@ ForEach ($VirtualNetwork in $VirtualNetworks) {
         Continue 
     }
     Log -Text "Subscription $($VirtualNetwork.Subscription) is now selected."
-    Log -Text "Validating if virtual network $($VirtualNetwork.Name) already exist."
+    Log -Text "Validating if virtual network $($VirtualNetwork.Name) exist."
     $AzVirtualNetwork = Get-AzVirtualNetwork -Name $VirtualNetwork.Name -ErrorAction SilentlyContinue
     #If the value of the $AzVirtualNetwork variable equals $Null, this indicates that the virtual network does not exist.
     If ($Null -eq $AzVirtualNetwork) {
-        Log -Text "Validating if resource group $($VirtualNetwork.ResourceGroup) already exist."
+        Log -Text "Validating if resource group $($VirtualNetwork.ResourceGroup) exist."
         $AzResourceGroup = Get-AzResourceGroup -Name $VirtualNetwork.ResourceGroup -ErrorAction SilentlyContinue
         #If the value of the $AzResourceGroup variable equals $Null, this indicates that the resource group does not exist.
         #It is not possible to create a virtual network without a valid resource group.
@@ -222,7 +222,7 @@ ForEach ($VirtualNetwork in $VirtualNetworks) {
         }
     }
     Else {
-        Log -Text "Virtual network $($VirtualNetwork.Name) already exist."
+        Log -Text "Virtual network $($VirtualNetwork.Name) exist."
         $Config = $True
         If ($AzVirtualNetwork.ResourceGroupName -ne $VirtualNetwork.ResourceGroup) {
             $Config = $False
@@ -286,7 +286,7 @@ ForEach ($Subnet in $Subnets) {
         Log -Text "It will not be possible to validate or create the subnet $($Subnet.Name)." -Error
         Continue
     }
-    Log -Text "Validating if subnet $($Subnet.Name) already exist."
+    Log -Text "Validating if subnet $($Subnet.Name) exist."
     $AzVirtualNetworkSubnetConfig = Get-AzVirtualNetworkSubnetConfig -VirtualNetwork $AzVirtualNetwork -Name $Subnet.Name -ErrorAction SilentlyContinue
     If ($Null -eq $AzVirtualNetworkSubnetConfig) {
         Log -Text "Creating subnet $($Subnet.Name)..."
@@ -302,7 +302,7 @@ ForEach ($Subnet in $Subnets) {
         Log -Text "Subnet $($Subnet.Name) successfully created."
     }
     Else {
-        Log -Text "Subnet $($Subnet.Name) already exist."
+        Log -Text "Subnet $($Subnet.Name) exist."
         If ($AzVirtualNetworkSubnetConfig.AddressPrefix -ne $Subnet.AddressPrefix) {
             Log -Text "Subnet $($Subnet.Name) does not have the address prefix $($Subnet.AddressPrefix)." -Warning
         }
