@@ -69,7 +69,9 @@ $SecurityRules = @(
     New-Object PSObject -Property @{NetworkSecurityGroup = "nsg-snet-dns-cac-001"; Name = "AllowDNS"; Description = "Allow DNS UDP 53"; Access = "Allow"; Direction = "Inbound"; Priority = "1100"; Protocol = "UDP"; SourceAddressPrefix = "*"; SourcePortRange = "*"; DestinationAddressPrefix = "VirtualNetwork"; DestinationPortRange = "53"}
 )
 
-
+#Network security group assignment to subnet
+#Network security group must be declared above.
+#Comment object if no subnet is required.
 $NetworkSecurityGroupsToSubnet = @(
     New-Object PSObject -Property @{NetworkSecurityGroup = "nsg-snet-dns-cac-001"; VirtualNetwork = "vnet-hub-cac-001"; Subnet ="snet-dns-cac-001"}
 )
