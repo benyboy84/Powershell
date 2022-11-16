@@ -252,7 +252,7 @@ ForEach ($Subnet in $Subnets) {
     $Subscription = $VirtualNetworks | Where-Object {$_.Name -eq $Subnet.VirtualNetwork} | Select -Property Subscription -ExpandProperty Subscription
     #If the value of the $Subscription variable equals $Null, this indicates that the virtual network is not declared in the mandatory manual configuration section.
     If ($Null -eq $Subscription) {
-        Log -Text "Unable to get the subscription name for the virtual network $($Subnet.VirtualNetwork)."
+        Log -Text "Unable to get the subscription name for the virtual network $($Subnet.VirtualNetwork)." -Error
         Log -Text "It will not be possible to validate or create the subnet $($Subnet.Name)." -Error
         Continue
     }
