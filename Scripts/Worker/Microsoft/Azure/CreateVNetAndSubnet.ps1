@@ -7,7 +7,7 @@ Script to create Microsoft Azure virtual network(s) and subnet(s)
 Script to create Microsoft Azure virtual network(s) and subnet(s).
 
 NOTE:
-This script will not covored Bastion, DDoS or Firewall. 
+This script will not cover Bastion, DDoS or Firewall. 
     Things that can be configured during a virtual network creation.
 
 VERSION:
