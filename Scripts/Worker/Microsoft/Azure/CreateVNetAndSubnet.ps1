@@ -257,26 +257,26 @@ ForEach ($Subnet in $Subnets) {
         Continue
     }
     Else {
-        Log -Text "Validating if subscription $($VirtualNetwork.Subscription) exist."
+        Log -Text "Validating if subscription $($Subscription) exist."
         Try {
-            $AzSubscription = Get-AzSubscription -SubscriptionName $VirtualNetwork.Subscription
+            $AzSubscription = Get-AzSubscription -SubscriptionName $Subscription
         }
         Catch {
-            Log -Text "Subscription $($VirtualNetwork.Subscription) does not exist." -Error
-            Log -Text "It will not be possible to validate or create the virtual network $($VirtualNetwork.Name)." -Error
+            Log -Text "Subscription $($Subscription) does not exist." -Error
+            Log -Text "It will not be possible to validate or create the subnet $($Subnet.Name)." -Error
             Continue
         }
-        Log -Text "Setting the subscription $($VirtualNetwork.Subscription)..."
+        Log -Text "Setting the subscription $($Subscription)..."
         Try {
             Set-AzContext -Subscription $AzSubscription | Out-Null
         }
         Catch {
-            Log -Text "Unable to set the subscription $($VirtualNetwork.Subscription)." -Error
+            Log -Text "Unable to set the subscription $($Subscription)." -Error
             Log -Text "Error:$($PSItem.Exception.Message)" -Error 
-            Log -Text "It will not be possible to validate or create the virtual network $($VirtualNetwork.Name)." -Error
+            Log -Text "It will not be possible to validate or create the subnet $($Subnet.Name)." -Error
             Continue 
         }
-        Log -Text "Subscription $($VirtualNetwork.Subscription) is now selected."
+        Log -Text "Subscription $($Subscription) is now selected."
     }    
     Log -Text "Getting the virtual network for subnet $($Subnet.Name)."
     $AzVirtualNetwork = Get-AzVirtualNetwork -Name $Subnet.VirtualNetwork
