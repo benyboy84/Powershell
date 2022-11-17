@@ -61,9 +61,9 @@ $NetworkSecurityGroups = @(
 # - Priority: 1 to 4096 and must be unique for the inbound security rules or for the outboud security rules
 # - Protocol: Ah, Esp, Icmp, Tcp, Udp
 # - SourceAddressPrefix: can be a valid address prefix, "*" for ANY or a valid tag like Internet, VirtualNetwork, AzureLoadBalancer...
-# - SourcePortRange: must be written with format 443 or (80,443)
+# - SourcePortRange: must be written with format "443" or @("80","443"), "20000-20100" or @("443","20000-20100")
 # - DestinationAddressPrefix: ccan be a valid address prefix, "*" for ANY or a valid tag like Internet, VirtualNetwork, AzureLoadBalancer...
-# - DestinationPortRange: must be written with format 443 or (80,443)
+# - DestinationPortRange: must be written with format "443" or @("80","443"), "20000-20100" or @("443","20000-20100")
 #Comment object if no subnet is required.
 $SecurityRules = @(
     New-Object PSObject -Property @{NetworkSecurityGroup = "nsg-snet-dns-cac-001"; Name = "AllowDNS"; Description = "Allow DNS UDP 53"; Access = "Allow"; Direction = "Inbound"; Priority = "1100"; Protocol = "UDP"; SourceAddressPrefix = "*"; SourcePortRange = "*"; DestinationAddressPrefix = "VirtualNetwork"; DestinationPortRange = "53"}
