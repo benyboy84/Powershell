@@ -49,7 +49,7 @@ $ErrorActionPreference = "Stop"
 
 #Network security group(s)
 $NetworkSecurityGroups = @(
-    New-Object PSObject -Property @{Subscription = "hub-prod-001"; ResourceGroup = "rg-hub-prod-001"; Name = "nsg-snet-dns-cac-001"; Region = "canadacentral";}
+    New-Object PSObject -Property @{Subscription = "hub-prod-001"; ResourceGroupName = "rg-hub-prod-001"; Name = "nsg-snet-dns-cac-001"; Region = "canadacentral";}
 )
 
 #Network security rule(s)
@@ -209,14 +209,14 @@ ForEach ($NetworkSecurityGroup in $NetworkSecurityGroups) {
     $AzNetworkSecurityGroup = Get-AzNetworkSecurityGroup -Name $NetworkSecurityGroup.Name
     #If the value of the $AzNetworkSecurityGroup variable equals $Null, this indicates that the network security group does not exist.
     If ($Null -eq $AzNetworkSecurityGroup) {
-        Log -Text "Validating if resource group $($NetworkSecurityGroup.ResourceGroup) exist."
-        $AzResourceGroup = Get-AzResourceGroup -Name $NetworkSecurityGroup.ResourceGroup -ErrorAction SilentlyContinue
-        #If the value of the $AzResourceGroup variable equals $Null, this indicates that the resource group does not exist.
+        Log -Text "Validating if resource group $($NetworkSecurityGroup.ResourceGroupName) exist."
+        $AzResourceGroupName = Get-AzResourceGroup -Name $NetworkSecurityGroup.ResourceGroupName -ErrorAction SilentlyContinue
+        #If the value of the $AzResourceGroupName variable equals $Null, this indicates that the resource group does not exist.
         #It is not possible to create a network security group without a valid resource group.
-        If ($Null -ne $AzResourceGroup) {
+        If ($Null -ne $AzResourceGroupName) {
             Log -Text "Creating the network security group $($NetworkSecurityGroup.Name)..."
             Try {
-                New-AzNetworkSecurityGroup -Name $NetworkSecurityGroup.Name -ResourceGroupName $NetworkSecurityGroup.ResourceGroup -Location $NetworkSecurityGroup.Region | Out-Null
+                New-AzNetworkSecurityGroup -Name $NetworkSecurityGroup.Name -ResourceGroupName $NetworkSecurityGroup.ResourceGroupName -Location $NetworkSecurityGroup.Region | Out-Null
             }
             Catch {
                 Log -Text "An error occurred during the creation of the network security group $($NetworkSecurityGroup.Name)." -Error
@@ -226,16 +226,16 @@ ForEach ($NetworkSecurityGroup in $NetworkSecurityGroups) {
             Log -Text "Network security group $($NetworkSecurityGroup.Name) successfully created."
         }
         Else {
-            Log -Text "Resource group $($NetworkSecurityGroup.ResourceGroup) does not exist." -Error
+            Log -Text "Resource group $($NetworkSecurityGroup.ResourceGroupName) does not exist." -Error
             Log -Text "It is not be possible to create the network security group $($NetworkSecurityGroup.Name) without a valid resource group." -Error
        }
     }
     Else {
         Log -Text "Network security group $($NetworkSecurityGroup.Name) exist."
         $Config = $True
-        If ($AzNetworkSecurityGroup.ResourceGroupName -ne $NetworkSecurityGroup.ResourceGroup) {
+        If ($AzNetworkSecurityGroup.ResourceGroupName -ne $NetworkSecurityGroup.ResourceGroupName) {
             $Config = $False
-            Log -Text "Network security group $($NetworkSecurityGroup.Name) is not in the ressource group $($NetworkSecurityGroup.ResourceGroup)." -Warning
+            Log -Text "Network security group $($NetworkSecurityGroup.Name) is not in the ressource group $($NetworkSecurityGroup.ResourceGroupName)." -Warning
         }
         If ($AzNetworkSecurityGroup.Location -ne $NetworkSecurityGroup.Region) {
             $Config = $False
@@ -346,7 +346,7 @@ ForEach ($SecurityRule in $SecurityRules) {
             $Config = $False
             Log -Text "Security rule $($SecurityRule.Name) source address prefix is not $($SecurityRule.SourceAddressPrefix)." -Warning
         }
-        If ($AzNetworkSecurityRuleConfig.SourcePortRange -ne $SecurityRule.SourcePortRange) {
+        If (Compare-Object $AzNetworkSecurityRuleConfig.SourcePortRange.PSObject.BaseObject $SecurityRule.SourcePortRange.PSObject.BaseObject) {
             $Config = $False
             Log -Text "Security rule $($SecurityRule.Name) source port range is not $($SecurityRule.SourcePortRange)." -Warning
         }
@@ -354,7 +354,7 @@ ForEach ($SecurityRule in $SecurityRules) {
             $Config = $False
             Log -Text "Security rule $($SecurityRule.Name) destination address prefix is not $($SecurityRule.DestinationAddressPrefix)." -Warning
         }
-        If ($AzNetworkSecurityRuleConfig.DestinationPortRange -ne $SecurityRule.DestinationPortRange) {
+        If (Compare-Object $AzNetworkSecurityRuleConfig.DestinationPortRange.PSObject.BaseObject  $SecurityRule.DestinationPortRange.PSObject.BaseObject) {
             $Config = $False
             Log -Text "Security rule $($SecurityRule.Name) destination port range is not $($SecurityRule.DestinationPortRange)." -Warning
         }
