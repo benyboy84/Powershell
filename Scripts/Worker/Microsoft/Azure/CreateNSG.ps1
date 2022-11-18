@@ -71,7 +71,7 @@ $SecurityRules = @(
 
 #Network security group assignment to subnet
 #Network security group must be declared above.
-#Comment object if no subnet is required.
+#Comment object if no assignment to subnet is required.
 $NetworkSecurityGroupsToSubnet = @(
     New-Object PSObject -Property @{NetworkSecurityGroup = "nsg-snet-dns-cac-001"; VirtualNetwork = "vnet-hub-cac-001"; Subnet ="snet-dns-cac-001"}
 )
