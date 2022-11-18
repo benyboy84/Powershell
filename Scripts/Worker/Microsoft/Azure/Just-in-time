@@ -1,0 +1,113 @@
+
+#Just-in-time network access policy
+#maxRequestAccessDuration needs to be between PT1H and PT3H.
+#Comment object if no just-in-time access is required.
+$JitNetworkAccessPolicies = @(
+    New-Object PSObject -Property @{Name =""; VirtualMachine = ""; Number = @("22", "443"); Protocol = "*"; allowedSourceAddressPrefix = "*"; maxRequestAccessDuration = "PT3H"}
+    New-Object PSObject -Property @{Name =""; VirtualMachine = ""; Number = @("22", "443"); Protocol = "*"; allowedSourceAddressPrefix = "*"; maxRequestAccessDuration = "PT3H"}
+)
+
+
+#**************************************************************************************************
+#Assign just-in-time access
+#**************************************************************************************************
+
+ForEach ($JitNetworkAccessPolicy in $JitNetworkAccessPolicies) {
+    Log -Text "Getting the subscription for the just-in-time network access policy $($JitNetworkAccessPolicy.Name)."
+    $Subscription = $VirtualMachines | Where-Object {$_.Name -eq $JitNetworkAccessPolicy.VirtualMachine} | Select -Property Subscription -ExpandProperty Subscription
+    #If the value of the $Subscription variable equals $Null, this indicates that the virtual machine associate with this just-in-time network access policy is not declared in the mandatory manual configuration section.
+    If ($Null -eq $Subscription) {
+        Log -Text "Unable to get the subscription name for the just-in-time network access policy $($JitNetworkAccessPolicy.Name)." -Error
+        Log -Text "It will not be possible to create or validate the just-in-time network access policy $($JitNetworkAccessPolicy.Name)." -Error
+        Continue
+    }
+    Else {
+        Log -Text "Validating if subscription $($Subscription) exist."
+        Try {
+            $AzSubscription = Get-AzSubscription -SubscriptionName $Subscription
+        }
+        Catch {
+            Log -Text "Subscription $($Subscription) does not exist." -Error
+            Log -Text "It will not be possible to create or validate the just-in-time network access policy $($JitNetworkAccessPolicy.Name)." -Error
+            Continue
+        }
+        Log -Text "Setting the subscription $($Subscription)..."
+        Try {
+            Set-AzContext -Subscription $AzSubscription | Out-Null
+        }
+        Catch {
+            Log -Text "Unable to set the subscription $($Subscription)." -Error
+            Log -Text "Error:$($PSItem.Exception.Message)" -Error 
+            Log -Text "It will not be possible to create or validate the just-in-time network access policy $($JitNetworkAccessPolicy.Name)." -Error
+            Continue 
+        }
+        Log -Text "Subscription $($Subscription) is now selected."
+    }    
+    Log -Text "Getting the resource group for the just-in-time network access policy $($JitNetworkAccessPolicy.Name)."
+    $ResourceGroupName = $VirtualMachines | Where-Object {$_.Name -eq $JitNetworkAccessPolicy.VirtualMachine} | Select -Property ResourceGroupName -ExpandProperty ResourceGroupName
+    #If the value of the $ResourceGroupName variable equals $Null, this indicates that the virtual machine associate with this just-in-time network access policy is not declared in the mandatory manual configuration section.
+    If ($Null -eq $ResourceGroupName) {
+        Log -Text "Unable to get the resource group name for the just-in-time network access policy $($JitNetworkAccessPolicy.Name)." -Error
+        Log -Text "It will not be possible to create or validate the just-in-time network access policy $($JitNetworkAccessPolicy.Name)." -Error
+        Continue
+    }
+    Log -Text "Getting the virtual machine $($JitNetworkAccessPolicy.VirtualMachine) for the just-in-time network access policy $($JitNetworkAccessPolicy.Name)."
+    $VirtualMachine = Get-AzVM -Name $JitNetworkAccessPolicy.VirtualMachine
+    #If the value of the $VirtualMachine variable equals $Null, this indicates that the virtual machine associate with this just-in-time network access policy does not exist.
+    If ($Null -eq $ResourceGroupName) {
+        Log -Text "Unable to get the virtual machine $($JitNetworkAccessPolicy.VirtualMachine) for the just-in-time network access policy $($JitNetworkAccessPolicy.Name)." -Error
+        Log -Text "It will not be possible to create or validate the just-in-time network access policy $($JitNetworkAccessPolicy.Name)." -Error
+        Continue
+    }
+    Log -Text "Validating if jut-in-time network access policy $($JitNetworkAccessPolicy.Name) exist."
+    $AzJitNetworkAccessPolicy = Get-AzJitNetworkAccessPolicy -Name $JitNetworkAccessPolicy.Name -ResourceGroupName $ResourceGroupName -Location $VirtualMachine.Location -ErrorAction SilentlyContinue
+    #If the value of the $AzJitNetworkAccessPolicy variable equals $Null, this indicates that the jut-in-time network access policy does not exist.
+    If ($Null -eq $AzJitNetworkAccessPolicy) {
+        Log -Text "Creating the just-in-time network access policy $($JitNetworkAccessPolicy.Name)..."
+        Try {
+            $JitPolicy = (@{
+                id=$VirtualMachine.Id;
+                ports=(@{
+                     number=$JitNetworkAccessPolicy.Number;
+                     protocol=$JitNetworkAccessPolicy.Protocol;
+                     allowedSourceAddressPrefix=@($JitNetworkAccessPolicy.allowedSourceAddressPrefix);
+                     maxRequestAccessDuration=$JitNetworkAccessPolicy.maxRequestAccessDuration}
+                     )})
+            $JitPolicyArr=@($JitPolicy)
+            Set-AzJitNetworkAccessPolicy -Kind "Basic" -Location $VirtualMachine.Location -Name $JitNetworkAccessPolicy.Name -ResourceGroupName $ResourceGroupName -VirtualMachine  $JitPolicyArr | Out-Null      
+        }
+        Catch {
+            Log -Text "An error occurred during the creation of the network security group $($NetworkSecurityGroup.Name)." -Error
+            Log -Text "Error:$($PSItem.Exception.Message)" -Error
+            Continue
+        }
+        Log -Text "Just-in-time network access policy $($JitNetworkAccessPolicy.Name) successfully created."
+    }
+    Else {
+        Log -Text "Just-in-time network access policy $($JitNetworkAccessPolicy.Name) exist."
+        $Config = $True
+        If ($AzJitNetworkAccessPolicy.VirtualMachines.Id -ne $VirtualMachine.Id) {
+            $Config = $False
+            Log -Text "Just-in-time network access policy $($JitNetworkAccessPolicy.Name) is not in associate with ." -Warning
+        }
+        If ($AzJitNetworkAccessPolicy.VirtualMachines.Ports.Number -ne $JitNetworkAccessPolicy.Number) {
+            $Config = $False
+            Log -Text "Just-in-time network access policy $($JitNetworkAccessPolicy.Name) port is not $($JitNetworkAccessPolicy.Number)." -Warning
+        }
+        If ($AzJitNetworkAccessPolicy.VirtualMachines.Ports.Protocol -ne $JitNetworkAccessPolicy.Protocol) {
+            $Config = $False
+            Log -Text "Just-in-time network access policy $($JitNetworkAccessPolicy.Name) protocol is not $($JitNetworkAccessPolicy.Protocol)." -Warning
+        }
+        If ($AzJitNetworkAccessPolicy.VirtualMachines.Ports.AllowedSourceAddressPrefix -ne $JitNetworkAccessPolicy.AllowedSourceAddressPrefix) {
+            $Config = $False
+            Log -Text "Just-in-time network access policy $($JitNetworkAccessPolicy.Name) allowed source address prefix is not $($JitNetworkAccessPolicy.AllowedSourceAddressPrefix)." -Warning
+        }
+        If ($AzJitNetworkAccessPolicy.VirtualMachines.Ports.MaxRequestAccessDuration -ne $JitNetworkAccessPolicy.MaxRequestAccessDuration) {
+            $Config = $False
+            Log -Text "Just-in-time network access policy $($JitNetworkAccessPolicy.Name) max request access duration is not $($JitNetworkAccessPolicy.MaxRequestAccessDuration)." -Warning
+        }
+        If ($Config) {
+            Log -Text "Just-in-time network access policy $($JitNetworkAccessPolicy.Name) is properly configured."
+        }
+    }
+}
